@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Odara S&OP — Materiais</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pa-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .pa-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+    .pa-card .pa-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .pa-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.78rem;
+    }
+    .pa-row .lbl { color: var(--txt-3); font-family: var(--font-mono); }
+    .pa-row .val { font-family: var(--font-mono); font-weight: 600; color: var(--txt-1); }
+    .pa-prog {
+      margin-top: 8px;
+    }
+    .pal-detail {
+      font-size: 0.68rem;
+      color: var(--txt-3);
+      font-family: var(--font-mono);
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar"></div>
+
+  <main id="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Fluxo de Materiais</div>
+        <div class="page-subtitle">Paletes, posições PA e necessidade 3PL · 2026</div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card amarelo">
+          <div class="kpi-label">Posições PA — Total</div>
+          <div class="kpi-value">52</div>
+          <div class="kpi-unit">24 L01 · 13 L02 · 15 L03</div>
+        </div>
+        <div class="kpi-card azul">
+          <div class="kpi-label">Pico de Paletes/mês</div>
+          <div class="kpi-value" id="kpi-pico-pal">—</div>
+          <div class="kpi-unit">mês pico (Set/Jul 2026)</div>
+        </div>
+        <div class="kpi-card verde">
+          <div class="kpi-label">Buffer Dr Peanut</div>
+          <div class="kpi-value verde">20</div>
+          <div class="kpi-unit">paletes reservados (L03)</div>
+        </div>
+        <div class="kpi-card lilas" style="--lilas:#A78BFA">
+          <div class="kpi-label">Necessidade 3PL est.</div>
+          <div class="kpi-value" id="kpi-3pl">—</div>
+          <div class="kpi-unit">posições extras pico anual</div>
+        </div>
+      </div>
+
+      <!-- PA Positions detail -->
+      <div class="section-header"><div class="section-title">Posições de <span>Produto Acabado</span></div></div>
+      <div class="pa-grid">
+        <div class="pa-card">
+          <div class="pa-title" style="color:var(--l01)">▌ L01 — Clássicos</div>
+          <div class="pa-row"><span class="lbl">Posições PA</span><span class="val">24</span></div>
+          <div class="pa-row"><span class="lbl">cx/palete (Clássicos)</span><span class="val">80 cx</span></div>
+          <div class="pa-row"><span class="lbl">Capacidade PA (un)</span><span class="val" id="pa-l01-cap">—</span></div>
+          <div class="pa-prog">
+            <div style="font-size:0.68rem;color:var(--txt-3);font-family:var(--font-mono);margin-bottom:4px">Uso estimado pico</div>
+            <div class="prog-wrap"><div class="prog-fill l01" id="prog-pa-l01" style="width:0%"></div></div>
+            <div class="pal-detail" id="pa-l01-uso">—</div>
+          </div>
+        </div>
+        <div class="pa-card">
+          <div class="pa-title" style="color:var(--l02)">▌ L02 — Mini / Zero</div>
+          <div class="pa-row"><span class="lbl">Posições PA</span><span class="val">13</span></div>
+          <div class="pa-row"><span class="lbl">cx/palete</span><span class="val">80 cx</span></div>
+          <div class="pa-row"><span class="lbl">Capacidade PA (un)</span><span class="val" id="pa-l02-cap">—</span></div>
+          <div class="pa-prog">
+            <div style="font-size:0.68rem;color:var(--txt-3);font-family:var(--font-mono);margin-bottom:4px">Uso estimado pico</div>
+            <div class="prog-wrap"><div class="prog-fill l02" id="prog-pa-l02" style="width:0%"></div></div>
+            <div class="pal-detail" id="pa-l02-uso">—</div>
+          </div>
+        </div>
+        <div class="pa-card">
+          <div class="pa-title" style="color:var(--l03)">▌ L03 — Crocantes + Dr Peanut</div>
+          <div class="pa-row"><span class="lbl">Posições PA</span><span class="val">15</span></div>
+          <div class="pa-row"><span class="lbl">cx/palete (Crocantes)</span><span class="val">84 cx</span></div>
+          <div class="pa-row"><span class="lbl">cx/palete (Dr Peanut)</span><span class="val">105 cx</span></div>
+          <div class="pa-row"><span class="lbl">Buffer DP</span><span class="val" style="color:var(--lilas)">20 posições</span></div>
+          <div class="pa-prog">
+            <div style="font-size:0.68rem;color:var(--txt-3);font-family:var(--font-mono);margin-bottom:4px">Uso estimado pico</div>
+            <div class="prog-wrap"><div class="prog-fill l03" id="prog-pa-l03" style="width:0%"></div></div>
+            <div class="pal-detail" id="pa-l03-uso">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid-equal">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Paletes Gerados por Mês</div>
+              <div class="chart-subtitle">Saída de PA por linha · 2026</div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--l01)"></div> L01</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--l02)"></div> L02</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--l03)"></div> L03</div>
+            </div>
+          </div>
+          <canvas id="chart-paletes" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Concentração de Expedição</div>
+              <div class="chart-subtitle">% por semana do mês (S1–S4)</div>
+            </div>
+          </div>
+          <canvas id="chart-expedicao" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabela mensal paletes -->
+      <div class="table-card">
+        <div class="table-card-header">
+          <div class="table-card-title">Detalhamento Mensal de Paletes</div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="right">Unid L01</th>
+              <th class="right">Pal L01</th>
+              <th class="right">Unid L02</th>
+              <th class="right">Pal L02</th>
+              <th class="right">Unid L03</th>
+              <th class="right">Pal L03</th>
+              <th class="right">Total Paletes</th>
+              <th class="right">Pico S4</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-paletes"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    initApp('materiais');
+
+    // Parâmetros de expedição
+    const CX_PAL  = { L01: 80, L02: 80, L03_crocante: 84, L03_dp: 105 };
+    const UCX     = { L01: 72, L02_mini: 108, L02_zero: 72, L03: 72, dp: 48 };
+    const CONC    = { S1: 0.15, S2: 0.25, S3: 0.25, S4: 0.35 };
+    const PA_POS  = { L01: 24, L02: 13, L03: 15 };
+
+    // Paletes por unidade (aprox médio por linha)
+    function palet(unid, cxPal, ucx) {
+      const caixas  = unid / ucx;
+      return Math.ceil(caixas / cxPal);
+    }
+
+    function getUnitsPorMes(linha, mes) {
+      if (linha === 'L01') return calcDemandaMensal('L01', mes);
+      if (linha === 'L02') return calcDemandaMensal('L02', mes);
+      if (linha === 'L03') return calcDemandaMensal('L03', mes) - (DR_PEANUT_2026[mes] || 0);
+      if (linha === 'DP')  return DR_PEANUT_2026[mes] || 0;
+      return 0;
+    }
+
+    function getPaletesMes(mes) {
+      const u01  = getUnitsPorMes('L01', mes);
+      const u02  = getUnitsPorMes('L02', mes);
+      const u03c = getUnitsPorMes('L03', mes);
+      const u03d = getUnitsPorMes('DP',  mes);
+
+      const p01  = palet(u01,  CX_PAL.L01,         UCX.L01);
+      const p02  = palet(u02,  CX_PAL.L02,         UCX.L02_zero);
+      const p03c = palet(u03c, CX_PAL.L03_crocante, UCX.L03);
+      const p03d = palet(u03d, CX_PAL.L03_dp,       UCX.dp);
+
+      return { u01, u02, u03: u03c + u03d, p01, p02, p03: p03c + p03d, total: p01 + p02 + p03c + p03d };
+    }
+
+    function renderKPIsMat() {
+      let pico = 0;
+      for (let m = 1; m <= 12; m++) {
+        const t = getPaletesMes(m).total;
+        if (t > pico) pico = t;
+      }
+      document.getElementById('kpi-pico-pal').textContent = formatInt(pico);
+      // 3PL: posições além das 52 no pico S4
+      const picoPalS4 = Math.ceil(pico * CONC.S4);
+      const excesso   = Math.max(0, picoPalS4 - 52);
+      document.getElementById('kpi-3pl').textContent = excesso > 0 ? `+${excesso}` : '0';
+
+      // PA por linha (pico set/jul)
+      const picoMes = 9; // setembro = pico
+      const pData   = getPaletesMes(picoMes);
+      ['L01','L02','L03'].forEach((l, i) => {
+        const pal  = [pData.p01, pData.p02, pData.p03][i];
+        const pos  = [PA_POS.L01, PA_POS.L02, PA_POS.L03][i];
+        const ucx  = [UCX.L01, UCX.L02_zero, UCX.L03][i];
+        const cxp  = [CX_PAL.L01, CX_PAL.L02, CX_PAL.L03_crocante][i];
+        const cap  = pos * cxp * ucx;
+        const dem  = [pData.u01, pData.u02, pData.u03][i];
+        const pct  = Math.min(dem / cap * 100, 100).toFixed(0);
+        document.getElementById(`pa-${l.toLowerCase()}-cap`).textContent = formatInt(cap);
+        document.getElementById(`prog-pa-${l.toLowerCase()}`).style.width = pct + '%';
+        document.getElementById(`pa-${l.toLowerCase()}-uso`).textContent  = `${pct}% uso pico (${formatMes(picoMes)}/26) · ${pal} paletes`;
+      });
+    }
+
+    function renderChartPaletes() {
+      const labels = MESES.slice(1);
+      const p01 = [], p02 = [], p03 = [];
+      for (let m = 1; m <= 12; m++) {
+        const d = getPaletesMes(m);
+        p01.push(d.p01); p02.push(d.p02); p03.push(d.p03);
+      }
+      new Chart(document.getElementById('chart-paletes'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'L01', data: p01, backgroundColor: '#FFB81D55', borderColor: '#FFB81D', borderWidth: 1, stack: 'a' },
+            { label: 'L02', data: p02, backgroundColor: '#3B82F655', borderColor: '#3B82F6', borderWidth: 1, stack: 'a' },
+            { label: 'L03', data: p03, backgroundColor: '#A78BFA55', borderColor: '#A78BFA', borderWidth: 1, stack: 'a' },
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { stacked: true, grid: { color: '#1A1A1A' } },
+            y: { stacked: true, grid: { color: '#1A1A1A' }, ticks: { stepSize: 200 } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatInt(ctx.raw)} pal` } }
+          }
+        }
+      });
+    }
+
+    function renderChartExpedicao() {
+      new Chart(document.getElementById('chart-expedicao'), {
+        type: 'doughnut',
+        data: {
+          labels: ['S1 – 15%','S2 – 25%','S3 – 25%','S4 – 35%'],
+          datasets: [{
+            data: [15, 25, 25, 35],
+            backgroundColor: ['#FFB81D33','#3B82F633','#A78BFA33','#FFB81D99'],
+            borderColor: ['#FFB81D','#3B82F6','#A78BFA','#FFB81D'],
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 12 } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.label}` } }
+          }
+        }
+      });
+    }
+
+    function renderTabelaPaletes() {
+      const tbody = document.getElementById('tbody-paletes');
+      tbody.innerHTML = Array.from({length:12}, (_,i) => {
+        const m = i + 1;
+        const d = getPaletesMes(m);
+        const picoS4 = Math.ceil(d.total * CONC.S4);
+        const isMes  = m === 7 || m === 9;
+        return `<tr style="${isMes?'background:rgba(255,184,29,0.04)':''}">
+          <td class="bold" style="${isMes?'color:var(--amarelo)':''}">${formatMes(m)}/26${isMes?' 🔥':''}</td>
+          <td class="right">${formatInt(d.u01)}</td>
+          <td class="right bold">${formatInt(d.p01)}</td>
+          <td class="right">${formatInt(d.u02)}</td>
+          <td class="right bold">${formatInt(d.p02)}</td>
+          <td class="right">${formatInt(d.u03)}</td>
+          <td class="right bold">${formatInt(d.p03)}</td>
+          <td class="right bold" style="${d.total>500?'color:var(--vermelho)':d.total>350?'color:var(--amarelo)':''}">${formatInt(d.total)}</td>
+          <td class="right" style="color:var(--txt-3)">${formatInt(picoS4)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderKPIsMat();
+      renderChartPaletes();
+      renderChartExpedicao();
+      renderTabelaPaletes();
+    });
+  </script>
+</body>
+</html>

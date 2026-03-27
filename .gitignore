@@ -1,0 +1,12 @@
+# Opcional: ignorar config com a anon key se preferir não commitar
+# js/config.js
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Odara S&OP — Planejamento</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .plan-table-wrap { overflow-x: auto; }
+    .plan-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+    .plan-table th {
+      padding: 9px 10px;
+      text-align: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.68rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--txt-3);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+    }
+    .plan-table th.linha-head { text-align: left; min-width: 90px; }
+    .plan-table td {
+      padding: 7px 8px;
+      text-align: center;
+      border-bottom: 1px solid rgba(38,38,38,0.5);
+      vertical-align: middle;
+    }
+    .plan-table tbody tr:hover td { background: var(--card-hover); }
+    .plan-table .linha-label {
+      text-align: left;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding-left: 16px;
+    }
+    .plan-table .metric-label {
+      text-align: left;
+      padding-left: 28px;
+      color: var(--txt-3);
+      font-size: 0.72rem;
+    }
+    .he-select {
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 4px;
+      color: var(--amarelo);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 3px 6px;
+      width: 50px;
+      text-align: center;
+      cursor: pointer;
+      outline: none;
+    }
+    .he-select:focus { border-color: var(--amarelo); }
+    .cap-val { color: var(--txt-2); }
+    .dem-val { color: var(--txt-1); }
+    .ocu-chip {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .ocu-chip.ok      { background: var(--verde-dim);   color: #4ADE80; }
+    .ocu-chip.warn    { background: var(--amarelo-dim); color: var(--amarelo); }
+    .ocu-chip.danger  { background: var(--vermelho-dim); color: #FF6B75; }
+    .delta-val.pos { color: var(--verde); }
+    .delta-val.neg { color: var(--vermelho); }
+    .linha-sep td { background: var(--surface) !important; padding: 2px 0; }
+    .global-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar"></div>
+
+  <main id="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Planejamento Mensal</div>
+        <div class="page-subtitle">Capacidade, demanda e horas extras por linha · 2026</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost" onclick="resetHE()">↺ Reset HE</button>
+        <button class="btn btn-primary" onclick="salvarHE()">💾 Salvar</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Controls -->
+      <div class="controls-bar">
+        <div class="global-controls">
+          <div class="control-group">
+            <span class="control-label">HE global</span>
+            <div class="he-tabs" id="he-global-tabs">
+              <div class="he-tab active" data-val="0" onclick="setGlobalHE(0)">0 sáb</div>
+              <div class="he-tab" data-val="1" onclick="setGlobalHE(1)">1 sáb</div>
+              <div class="he-tab" data-val="2" onclick="setGlobalHE(2)">2 sáb</div>
+              <div class="he-tab" data-val="3" onclick="setGlobalHE(3)">3 sáb</div>
+              <div class="he-tab" data-val="4" onclick="setGlobalHE(4)">4 sáb</div>
+            </div>
+          </div>
+          <div style="width:1px;height:20px;background:var(--border)"></div>
+          <div class="control-group">
+            <span class="control-label">Ver</span>
+            <div class="he-tabs">
+              <div class="he-tab active" onclick="setView('cap-dem')">Cap × Dem</div>
+              <div class="he-tab" onclick="setView('ocupacao')">Ocupação %</div>
+              <div class="he-tab" onclick="setView('delta')">Delta</div>
+            </div>
+          </div>
+          <div style="margin-left:auto;font-size:0.72rem;color:var(--txt-3);font-family:var(--font-mono)">
+            HE = +1 sábado por semana/mês do período
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart ocupação -->
+      <div class="chart-card" style="margin-bottom:20px;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Ocupação de Linha — 2026</div>
+            <div class="chart-subtitle">% capacidade utilizada por mês (com HE configurado)</div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--l01)"></div> L01</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--l02)"></div> L02</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--l03)"></div> L03</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--vermelho);"></div> Limite 100%</div>
+          </div>
+        </div>
+        <canvas id="chart-ocupacao" height="140"></canvas>
+      </div>
+
+      <!-- Tabela de planejamento -->
+      <div class="table-card">
+        <div class="table-card-header">
+          <div class="table-card-title">Detalhamento Mensal por Linha</div>
+          <span style="font-size:0.72rem;color:var(--txt-3);font-family:var(--font-mono)">
+            HE = sábados extras · cap em unidades
+          </span>
+        </div>
+        <div class="plan-table-wrap">
+          <table class="plan-table" id="plan-table">
+            <thead>
+              <tr>
+                <th class="linha-head">Linha / Métrica</th>
+                <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th>
+                <th>Mai</th><th>Jun</th><th>Jul</th><th>Ago</th>
+                <th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+              </tr>
+            </thead>
+            <tbody id="plan-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    initApp('planejamento');
+
+    // ── Estado HE ────────────────────────────────────────────────
+    // heMatrix[linha][mes] = nº de sábados extras
+    const heMatrix = {
+      L01: Array(13).fill(0),
+      L02: Array(13).fill(0),
+      L03: Array(13).fill(0),
+    };
+    let viewMode = 'cap-dem';
+    let chartOcu = null;
+
+    // Carregar do localStorage
+    const savedHE = localStorage.getItem('odara-he-matrix');
+    if (savedHE) {
+      try {
+        const parsed = JSON.parse(savedHE);
+        Object.assign(heMatrix, parsed);
+      } catch(_) {}
+    }
+
+    // ── Controles ────────────────────────────────────────────────
+    function setGlobalHE(val) {
+      ['L01','L02','L03'].forEach(l => {
+        heMatrix[l] = [0, ...Array(12).fill(val)]; // index 0 unused
+      });
+      document.querySelectorAll('.he-global-tabs .he-tab, #he-global-tabs .he-tab').forEach(t => {
+        t.classList.toggle('active', +t.dataset.val === val);
+      });
+      renderAll();
+    }
+
+    function setView(mode) {
+      viewMode = mode;
+      document.querySelectorAll('.controls-bar .he-tabs:nth-child(2) .he-tab').forEach((t,i) => {
+        t.classList.toggle('active', ['cap-dem','ocupacao','delta'][i] === mode);
+      });
+      renderTabelaPlan();
+    }
+
+    function resetHE() {
+      ['L01','L02','L03'].forEach(l => heMatrix[l] = Array(13).fill(0));
+      localStorage.removeItem('odara-he-matrix');
+      renderAll();
+    }
+
+    function salvarHE() {
+      localStorage.setItem('odara-he-matrix', JSON.stringify(heMatrix));
+      const btn = document.querySelector('.btn-primary');
+      btn.textContent = '✓ Salvo';
+      setTimeout(() => btn.textContent = '💾 Salvar', 2000);
+    }
+
+    // ── Tabela ───────────────────────────────────────────────────
+    function renderTabelaPlan() {
+      const tbody = document.getElementById('plan-tbody');
+      const rows  = [];
+
+      ['L01','L02','L03'].forEach(linha => {
+        const cor = linha === 'L01' ? 'var(--l01)' : linha === 'L02' ? 'var(--l02)' : 'var(--l03)';
+
+        // Linha: label + HE selector row
+        const heCells = Array.from({length:12}, (_,i) => {
+          const m  = i + 1;
+          const he = heMatrix[linha][m];
+          return `<td>
+            <select class="he-select" onchange="updateHE('${linha}',${m},this.value)">
+              ${[0,1,2,3,4].map(v => `<option value="${v}" ${v===he?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </td>`;
+        }).join('');
+        rows.push(`
+          <tr>
+            <td class="linha-label" style="color:${cor}">▌ ${linha}</td>
+            ${heCells}
+          </tr>`);
+
+        // Cap row
+        if (viewMode === 'cap-dem' || viewMode === 'delta') {
+          const capCells = Array.from({length:12}, (_,i) => {
+            const m   = i + 1;
+            const cap = calcCapacidadeMensal(linha, m, heMatrix[linha][m]);
+            return `<td class="cap-val">${(cap/1000).toFixed(0)}K</td>`;
+          }).join('');
+          rows.push(`<tr><td class="metric-label">Cap (un)</td>${capCells}</tr>`);
+        }
+
+        // Dem row
+        if (viewMode === 'cap-dem' || viewMode === 'delta') {
+          const demCells = Array.from({length:12}, (_,i) => {
+            const m   = i + 1;
+            const dem = calcDemandaMensal(linha, m);
+            return `<td class="dem-val">${(dem/1000).toFixed(0)}K</td>`;
+          }).join('');
+          rows.push(`<tr><td class="metric-label">Dem (un)</td>${demCells}</tr>`);
+        }
+
+        // Ocupação row (always)
+        const ocuCells = Array.from({length:12}, (_,i) => {
+          const m   = i + 1;
+          const ocu = calcOcupacao(linha, m, heMatrix[linha][m]);
+          const cls = ocu > 100 ? 'danger' : ocu > 85 ? 'warn' : 'ok';
+          return `<td><span class="ocu-chip ${cls}">${ocu.toFixed(0)}%</span></td>`;
+        }).join('');
+        rows.push(`<tr><td class="metric-label">Ocupação</td>${ocuCells}</tr>`);
+
+        // Delta row
+        if (viewMode === 'delta') {
+          const deltaCells = Array.from({length:12}, (_,i) => {
+            const m     = i + 1;
+            const delta = calcCapacidadeMensal(linha, m, heMatrix[linha][m]) - calcDemandaMensal(linha, m);
+            const cls   = delta < 0 ? 'neg' : 'pos';
+            return `<td class="delta-val ${cls}">${delta >= 0 ? '+' : ''}${(delta/1000).toFixed(0)}K</td>`;
+          }).join('');
+          rows.push(`<tr><td class="metric-label" style="color:var(--txt-2)">Delta</td>${deltaCells}</tr>`);
+        }
+
+        rows.push(`<tr class="linha-sep"><td colspan="13"></td></tr>`);
+      });
+
+      tbody.innerHTML = rows.join('');
+    }
+
+    function updateHE(linha, mes, val) {
+      heMatrix[linha][mes] = +val;
+      renderAll();
+    }
+
+    // ── Chart Ocupação ────────────────────────────────────────────
+    function renderChartOcupacao() {
+      const labels = MESES.slice(1);
+      const linhas = ['L01','L02','L03'];
+      const cores  = ['#FFB81D','#3B82F6','#A78BFA'];
+
+      const datasets = linhas.map((l,i) => ({
+        label: l,
+        data: Array.from({length:12}, (_,j) => calcOcupacao(l, j+1, heMatrix[l][j+1])),
+        borderColor: cores[i],
+        backgroundColor: cores[i] + '18',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+      }));
+
+      datasets.push({
+        label: '100% Limite',
+        data: Array(12).fill(100),
+        borderColor: '#EE273755',
+        borderDash: [6, 4],
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+        borderWidth: 1.5,
+      });
+
+      if (chartOcu) {
+        chartOcu.data.datasets.forEach((ds, i) => {
+          if (i < 3) ds.data = datasets[i].data;
+        });
+        chartOcu.update('none');
+        return;
+      }
+
+      chartOcu = new Chart(document.getElementById('chart-ocupacao'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { grid: { color: '#1A1A1A' } },
+            y: {
+              min: 0,
+              max: 130,
+              grid: { color: '#1A1A1A' },
+              ticks: { callback: v => v + '%' }
+            }
+          },
+          plugins: {
+            legend: { position: 'top', align: 'end' },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } }
+          }
+        }
+      });
+    }
+
+    function renderAll() {
+      renderTabelaPlan();
+      if (chartOcu) {
+        ['L01','L02','L03'].forEach((l,i) => {
+          chartOcu.data.datasets[i].data = Array.from({length:12}, (_,j) => calcOcupacao(l, j+1, heMatrix[l][j+1]));
+        });
+        chartOcu.update('active');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderChartOcupacao();
+      renderTabelaPlan();
+    });
+  </script>
+</body>
+</html>

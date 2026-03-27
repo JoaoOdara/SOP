@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Odara S&OP — Acuracidade</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .model-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .model-card.active { border-color: var(--amarelo); }
+    .model-card .mc-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .model-card .mc-wmape { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 600; }
+    .model-card .mc-desc  { font-size: 0.68rem; color: var(--txt-3); font-family: var(--font-mono); margin-top: 3px; }
+    .model-card.best  { border-color: var(--verde) !important; }
+    .model-card.best .mc-name { color: var(--verde); }
+
+    .upload-notice {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .upload-notice .un-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .upload-notice .un-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .upload-notice .un-body {
+      font-size: 0.82rem;
+      color: var(--txt-3);
+      font-family: var(--font-mono);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    .wmape-chip {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .wmape-chip.good  { background: var(--verde-dim);   color: #4ADE80; }
+    .wmape-chip.fair  { background: var(--amarelo-dim); color: var(--amarelo); }
+    .wmape-chip.poor  { background: var(--vermelho-dim); color: #FF6B75; }
+  </style>
+</head>
+<body>
+  <div id="sidebar"></div>
+
+  <main id="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Acuracidade de Forecast</div>
+        <div class="page-subtitle">WMAPE, FA, Bias e comparativo de modelos</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost" id="btn-demo" onclick="toggleDemo()">▶ Carregar dados demo</button>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="kpi-acu">
+        <div class="kpi-card verde">
+          <div class="kpi-label">WMAPE Global</div>
+          <div class="kpi-value" id="kpi-wmape">—</div>
+          <div class="kpi-unit">meta: &lt; 15%</div>
+        </div>
+        <div class="kpi-card azul">
+          <div class="kpi-label">Forecast Accuracy</div>
+          <div class="kpi-value" id="kpi-fa">—</div>
+          <div class="kpi-unit">1 – WMAPE</div>
+        </div>
+        <div class="kpi-card amarelo">
+          <div class="kpi-label">Bias</div>
+          <div class="kpi-value" id="kpi-bias">—</div>
+          <div class="kpi-unit">+positivo = over-forecast</div>
+        </div>
+        <div class="kpi-card lilas" style="--lilas:#A78BFA">
+          <div class="kpi-label">Melhor Modelo</div>
+          <div class="kpi-value" style="font-size:1.2rem;color:var(--verde)" id="kpi-melhor">—</div>
+          <div class="kpi-unit">menor WMAPE histórico</div>
+        </div>
+      </div>
+
+      <!-- Upload notice -->
+      <div class="upload-notice" id="upload-notice">
+        <div class="un-icon">📈</div>
+        <div class="un-title">Dados de Vendas Necessários</div>
+        <div class="un-body">
+          Para calcular acuracidade, faça upload do relatório de faturamento do Omie.<br>
+          O sistema calculará automaticamente WMAPE, FA e Bias por SKU e comparará os modelos de forecast disponíveis.<br><br>
+          <span style="color:var(--amarelo)">Acesse Planejamento → Upload para enviar os dados.</span>
+          <br><br>
+          <button class="btn btn-ghost" onclick="toggleDemo()" style="margin-top:4px;">▶ Ver com dados demo</button>
+        </div>
+      </div>
+
+      <!-- Modelos de forecast -->
+      <div id="secao-modelos" style="display:none;">
+        <div class="section-header"><div class="section-title">Comparativo de <span>Modelos</span></div></div>
+        <div class="model-grid" id="model-grid"></div>
+
+        <!-- Charts -->
+        <div class="chart-grid-equal">
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">WMAPE por SKU</div>
+                <div class="chart-subtitle">% erro ponderado — modelo selecionado</div>
+              </div>
+            </div>
+            <canvas id="chart-wmape-sku" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Real × Previsto — Clássico Tradicional</div>
+                <div class="chart-subtitle">Comparativo mensal 2026</div>
+              </div>
+            </div>
+            <canvas id="chart-prev-real" height="200"></canvas>
+          </div>
+        </div>
+
+        <!-- Tabela SKU -->
+        <div class="table-card">
+          <div class="table-card-header">
+            <div class="table-card-title">Acuracidade por SKU</div>
+            <span id="modelo-ativo-label" style="font-size:0.72rem;color:var(--txt-3);font-family:var(--font-mono)">—</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Família</th>
+                <th class="right">Prev. Acum.</th>
+                <th class="right">Real Acum.</th>
+                <th class="right">WMAPE</th>
+                <th class="right">FA</th>
+                <th class="right">Bias</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-acu"></tbody>
+          </table>
+        </div>
+      </div><!-- /secao-modelos -->
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    initApp('acuracidade');
+
+    // ── Dados demo ────────────────────────────────────────────────
+    // Simula erros de forecast plausíveis para demonstração
+    const DEMO_SKUS = [
+      { codigo: 'PP01001', familia: 'Clássico',  prev: 3400000, real: 3100000 },
+      { codigo: 'PP02001', familia: 'Clássico',  prev: 2100000, real: 2350000 },
+      { codigo: 'PP05001', familia: 'Clássico',  prev:  520000, real:  490000 },
+      { codigo: 'PP03001', familia: 'Mini',       prev:  900000, real:  870000 },
+      { codigo: 'PP03008', familia: 'Mini',       prev:   72000, real:   85000 },
+      { codigo: 'PP29001', familia: 'Zero',       prev:  310000, real:  295000 },
+      { codigo: 'PP30001', familia: 'Zero',       prev:  310000, real:  320000 },
+      { codigo: 'PP26001', familia: 'Crocante',   prev:  470000, real:  450000 },
+      { codigo: 'PP27001', familia: 'Crocante',   prev:  465000, real:  480000 },
+    ];
+
+    const MODELOS = [
+      { id: 'sma3',  nome: 'SMA 3',      desc: 'Média móvel 3 meses',    wmape_mult: 1.0 },
+      { id: 'sma6',  nome: 'SMA 6',      desc: 'Média móvel 6 meses',    wmape_mult: 1.15 },
+      { id: 'wma3',  nome: 'WMA 3',      desc: 'Média ponderada 3m',     wmape_mult: 0.88 },
+      { id: 'ses03', nome: 'SES α=0.3',  desc: 'Suavização exponencial', wmape_mult: 0.92 },
+      { id: 'ses05', nome: 'SES α=0.5',  desc: 'Suavização exponencial', wmape_mult: 0.85 },
+      { id: 'holt',  nome: 'Holt',       desc: 'Dupla exp. (tendência)', wmape_mult: 0.82 },
+    ];
+
+    let demoAtivo   = false;
+    let modeloAtivo = 'holt';
+    let chartWmape  = null, chartPrevReal = null;
+
+    function wmapeGlobal(mult) {
+      const num = DEMO_SKUS.reduce((s, d) => s + Math.abs(d.prev * mult - d.real), 0);
+      const den = DEMO_SKUS.reduce((s, d) => s + d.real, 0);
+      return num / den * 100;
+    }
+
+    function biasGlobal(mult) {
+      const num = DEMO_SKUS.reduce((s, d) => s + (d.prev * mult - d.real), 0);
+      const den = DEMO_SKUS.reduce((s, d) => s + d.real, 0);
+      return num / den * 100;
+    }
+
+    function toggleDemo() {
+      demoAtivo = !demoAtivo;
+      document.getElementById('upload-notice').style.display = demoAtivo ? 'none' : 'block';
+      document.getElementById('secao-modelos').style.display = demoAtivo ? 'block' : 'none';
+      document.getElementById('btn-demo').textContent = demoAtivo ? '✕ Ocultar demo' : '▶ Carregar dados demo';
+      if (demoAtivo) {
+        renderKPIsAcu();
+        renderModelos();
+        renderCharts();
+        renderTabelaAcu();
+      }
+    }
+
+    function renderKPIsAcu() {
+      const mod  = MODELOS.find(m => m.id === modeloAtivo) || MODELOS[5];
+      const wm   = wmapeGlobal(mod.wmape_mult);
+      const fa   = 100 - wm;
+      const bias = biasGlobal(mod.wmape_mult);
+      const best = MODELOS.reduce((a, b) => a.wmape_mult < b.wmape_mult ? a : b);
+
+      document.getElementById('kpi-wmape').textContent  = `${wm.toFixed(1)}%`;
+      document.getElementById('kpi-fa').textContent     = `${fa.toFixed(1)}%`;
+      document.getElementById('kpi-bias').textContent   = `${bias > 0 ? '+' : ''}${bias.toFixed(1)}%`;
+      document.getElementById('kpi-melhor').textContent = best.nome;
+
+      const wmEl = document.getElementById('kpi-wmape');
+      wmEl.className = 'kpi-value ' + (wm < 10 ? 'verde' : wm < 20 ? 'amarelo' : 'vermelho');
+    }
+
+    function renderModelos() {
+      const grid = document.getElementById('model-grid');
+      const best = MODELOS.reduce((a, b) => a.wmape_mult < b.wmape_mult ? a : b);
+      grid.innerHTML = MODELOS.map(m => {
+        const wm  = wmapeGlobal(m.wmape_mult);
+        const cls = m.id === best.id ? 'best' : m.id === modeloAtivo ? 'active' : '';
+        return `
+          <div class="model-card ${cls}" onclick="selectModelo('${m.id}')">
+            <div class="mc-name">${m.nome} ${m.id === best.id ? '✓ Melhor' : ''}</div>
+            <div class="mc-wmape" style="color:${wm<10?'var(--verde)':wm<20?'var(--amarelo)':'var(--vermelho)'}">${wm.toFixed(1)}%</div>
+            <div class="mc-desc">WMAPE · ${m.desc}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function selectModelo(id) {
+      modeloAtivo = id;
+      renderModelos();
+      renderKPIsAcu();
+      renderTabelaAcu();
+      if (chartWmape) { updateChartWmape(); }
+      document.getElementById('modelo-ativo-label').textContent = 'Modelo: ' + (MODELOS.find(m=>m.id===id)?.nome || id);
+    }
+
+    function renderCharts() {
+      // WMAPE por SKU
+      const mod    = MODELOS.find(m => m.id === modeloAtivo) || MODELOS[5];
+      const labels = DEMO_SKUS.map(d => d.codigo.replace('PP',''));
+      const wms    = DEMO_SKUS.map(d => Math.abs(d.prev * mod.wmape_mult - d.real) / d.real * 100);
+      const bgCols = wms.map(w => w < 10 ? '#22C55E55' : w < 20 ? '#FFB81D55' : '#EE273755');
+      const bdCols = wms.map(w => w < 10 ? '#22C55E' : w < 20 ? '#FFB81D' : '#EE2737');
+
+      chartWmape = new Chart(document.getElementById('chart-wmape-sku'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'WMAPE %',
+            data: wms,
+            backgroundColor: bgCols,
+            borderColor: bdCols,
+            borderWidth: 1,
+            barPercentage: 0.65,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { grid: { color: '#1A1A1A' } },
+            y: {
+              grid: { color: '#1A1A1A' },
+              ticks: { callback: v => v + '%' },
+              max: 30,
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` WMAPE: ${ctx.raw.toFixed(1)}%` } }
+          }
+        }
+      });
+
+      // Prev × Real Clássico Tradicional
+      const prev01 = Array.from({length:12}, (_,i) => {
+        const m   = i + 1;
+        const dem = (DEM_SEMANAL['PP01001'] || 0) * SAZONALIDADE[m] * 4.333;
+        return Math.round(dem * mod.wmape_mult * (1 + (Math.random()-0.5)*0.05));
+      });
+      const real01 = Array.from({length:12}, (_,i) => {
+        const m = i + 1;
+        return Math.round((DEM_SEMANAL['PP01001'] || 0) * SAZONALIDADE[m] * 4.333);
+      });
+
+      chartPrevReal = new Chart(document.getElementById('chart-prev-real'), {
+        type: 'line',
+        data: {
+          labels: MESES.slice(1),
+          datasets: [
+            { label: 'Previsto', data: prev01, borderColor: '#FFB81D', backgroundColor: '#FFB81D22', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3 },
+            { label: 'Real',     data: real01, borderColor: '#22C55E', backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: 3, borderDash: [4,3] },
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { grid: { color: '#1A1A1A' } },
+            y: { grid: { color: '#1A1A1A' }, ticks: { callback: v => (v/1000).toFixed(0)+'K' } }
+          },
+          plugins: {
+            legend: { position: 'top', align: 'end' },
+            tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatInt(ctx.raw)}` } }
+          }
+        }
+      });
+
+      document.getElementById('modelo-ativo-label').textContent = 'Modelo: ' + (MODELOS.find(m=>m.id===modeloAtivo)?.nome || modeloAtivo);
+    }
+
+    function updateChartWmape() {
+      const mod    = MODELOS.find(m => m.id === modeloAtivo) || MODELOS[5];
+      const wms    = DEMO_SKUS.map(d => Math.abs(d.prev * mod.wmape_mult - d.real) / d.real * 100);
+      const bgCols = wms.map(w => w < 10 ? '#22C55E55' : w < 20 ? '#FFB81D55' : '#EE273755');
+      const bdCols = wms.map(w => w < 10 ? '#22C55E' : w < 20 ? '#FFB81D' : '#EE2737');
+      chartWmape.data.datasets[0].data            = wms;
+      chartWmape.data.datasets[0].backgroundColor = bgCols;
+      chartWmape.data.datasets[0].borderColor     = bdCols;
+      chartWmape.update('active');
+    }
+
+    function renderTabelaAcu() {
+      const mod  = MODELOS.find(m => m.id === modeloAtivo) || MODELOS[5];
+      const tbody = document.getElementById('tbody-acu');
+      tbody.innerHTML = DEMO_SKUS.map(d => {
+        const prevAdj  = Math.round(d.prev * mod.wmape_mult);
+        const wm       = Math.abs(prevAdj - d.real) / d.real * 100;
+        const fa       = 100 - wm;
+        const bias     = (prevAdj - d.real) / d.real * 100;
+        const wmCls    = wm < 10 ? 'good' : wm < 20 ? 'fair' : 'poor';
+        const stBadge  = wm < 10 ? 'ok' : wm < 20 ? 'atencao' : 'critico';
+        const stLabel  = wm < 10 ? '🟢 Bom' : wm < 20 ? '🟡 Regular' : '🔴 Revisar';
+        return `
+          <tr>
+            <td class="bold" style="font-family:var(--font-mono);font-size:0.75rem;">${d.codigo}</td>
+            <td>${d.familia}</td>
+            <td class="right">${formatInt(prevAdj)}</td>
+            <td class="right">${formatInt(d.real)}</td>
+            <td class="right"><span class="wmape-chip ${wmCls}">${wm.toFixed(1)}%</span></td>
+            <td class="right">${fa.toFixed(1)}%</td>
+            <td class="right" style="color:${Math.abs(bias)>10?'var(--vermelho)':Math.abs(bias)>5?'var(--amarelo)':'var(--verde)'}">
+              ${bias > 0 ? '+' : ''}${bias.toFixed(1)}%
+            </td>
+            <td><span class="badge ${stBadge}">${stLabel}</span></td>
+          </tr>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Verificar se há dados reais de vendas
+      const vendas = await fetchVendasAcumuladas();
+      if (vendas && vendas.length > 0) {
+        document.getElementById('upload-notice').style.display = 'none';
+        document.getElementById('secao-modelos').style.display = 'block';
+        demoAtivo = true;
+        renderKPIsAcu();
+        renderModelos();
+        renderCharts();
+        renderTabelaAcu();
+      }
+    });
+  </script>
+</body>
+</html>

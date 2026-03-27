@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Odara S&OP — Visão Geral</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .fat-row {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .mini-stat-list { display: flex; flex-direction: column; gap: 10px; }
+    .mini-stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+    }
+    .mini-stat .ms-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--txt-3);
+      font-family: var(--font-display);
+      font-weight: 600;
+    }
+    .mini-stat .ms-value {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.4rem;
+      margin-top: 2px;
+    }
+    .mini-stat .ms-bar { margin-top: 6px; }
+    .ocupacao-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .ocu-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .ocu-label {
+      font-size: 0.7rem;
+      color: var(--txt-3);
+      font-family: var(--font-mono);
+    }
+    .ocu-val {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar"></div>
+
+  <main id="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Visão Geral</div>
+        <div class="page-subtitle">Panorama S&OP · 2026</div>
+      </div>
+      <div class="page-actions">
+        <span id="last-update" style="font-size:0.72rem;color:var(--txt-3);font-family:var(--font-mono);">—</span>
+        <button class="btn btn-ghost" onclick="location.reload()">↻ Atualizar</button>
+      </div>
+    </div>
+
+    <!-- Alert banner -->
+    <div id="alert-banner" class="alert-banner hidden" style="margin-top:20px;"></div>
+
+    <div class="page-body">
+
+      <!-- KPI row -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card amarelo">
+          <div class="kpi-label">Faturamento Previsto 2026</div>
+          <div class="kpi-value" id="kpi-fat">—</div>
+          <div class="kpi-unit">vs meta R$ 100M</div>
+          <div class="kpi-trend up" id="kpi-fat-pct">—</div>
+        </div>
+        <div class="kpi-card azul">
+          <div class="kpi-label">Volume Previsto 2026</div>
+          <div class="kpi-value" id="kpi-vol">—</div>
+          <div class="kpi-unit">unidades / ano</div>
+        </div>
+        <div class="kpi-card verde">
+          <div class="kpi-label">Ocupação Média</div>
+          <div class="kpi-value" id="kpi-ocu">—</div>
+          <div class="kpi-unit">% capacidade (L01 + L02 + L03)</div>
+        </div>
+        <div class="kpi-card vermelho">
+          <div class="kpi-label">SKUs em Alerta</div>
+          <div class="kpi-value vermelho" id="kpi-alerta">—</div>
+          <div class="kpi-unit">cobertura &lt; 2 semanas</div>
+        </div>
+      </div>
+
+      <!-- Capacidade × Demanda + Mini-stats -->
+      <div class="fat-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Capacidade × Demanda</div>
+              <div class="chart-subtitle">Unidades/mês — todas as linhas · 2026</div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-line" style="background:var(--l01)"></div> L01</div>
+              <div class="legend-item"><div class="legend-line" style="background:var(--l02)"></div> L02</div>
+              <div class="legend-item"><div class="legend-line" style="background:var(--l03)"></div> L03</div>
+            </div>
+          </div>
+          <canvas id="chart-cap-dem" height="190"></canvas>
+        </div>
+
+        <div class="mini-stat-list">
+          <div class="mini-stat">
+            <div class="ms-label">Ocupação por Linha — Mar/26</div>
+            <div class="ocupacao-row" id="ocu-row" style="margin-top:8px;">
+              <div class="ocu-cell"><div class="ocu-label">L01</div><div class="ocu-val tag-l01" id="ocu-l01">—</div><div class="prog-wrap"><div class="prog-fill l01" id="prog-l01" style="width:0%"></div></div></div>
+              <div class="ocu-cell"><div class="ocu-label">L02</div><div class="ocu-val tag-l02" id="ocu-l02">—</div><div class="prog-wrap"><div class="prog-fill l02" id="prog-l02" style="width:0%"></div></div></div>
+              <div class="ocu-cell"><div class="ocu-label">L03</div><div class="ocu-val tag-l03" id="ocu-l03">—</div><div class="prog-wrap"><div class="prog-fill l03" id="prog-l03" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div class="mini-stat">
+            <div class="ms-label">Capacidade Disponível/dia</div>
+            <div class="ms-value" style="color:var(--txt-1);">54.560</div>
+            <div style="font-size:0.7rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px;">alf/dia · 1 turno s/HE</div>
+          </div>
+          <div class="mini-stat">
+            <div class="ms-label">Dr Peanut (Copacker)</div>
+            <div class="ms-value" style="color:var(--lilas);" id="dp-mes">—</div>
+            <div style="font-size:0.7rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px;">unidades · mês atual</div>
+          </div>
+          <div class="mini-stat">
+            <div class="ms-label">Meta Anual</div>
+            <div style="height:4px;border-radius:2px;background:var(--border);margin:8px 0 4px;">
+              <div id="meta-bar" style="height:100%;border-radius:2px;background:var(--amarelo);transition:width 0.5s;width:0%;"></div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--txt-2);font-family:var(--font-mono);">
+              <span id="meta-txt">—</span> <span style="color:var(--txt-3)">/ R$ 100M</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Faturamento mensal -->
+      <div class="chart-card" style="margin-bottom:20px;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Faturamento Mensal Projetado</div>
+            <div class="chart-subtitle">R$ — receita estimada × meta acumulada R$ 100M</div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--amarelo)"></div> Receita mensal</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--verde)"></div> Acumulado</div>
+            <div class="legend-item"><div class="legend-line" style="background:rgba(255,255,255,0.2);border-top:1px dashed rgba(255,255,255,0.3)"></div> Meta R$ 100M</div>
+          </div>
+        </div>
+        <canvas id="chart-fat" height="150"></canvas>
+      </div>
+
+      <!-- Tabela cobertura -->
+      <div class="table-card">
+        <div class="table-card-header">
+          <div class="table-card-title">Cobertura de Estoque — Semana Atual</div>
+          <span id="estoque-status" style="font-size:0.72rem;color:var(--txt-3);font-family:var(--font-mono);">Aguardando upload do Omie</span>
+        </div>
+        <div id="tabela-cobertura">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Linha</th>
+                <th>SKU</th>
+                <th>Família</th>
+                <th class="right">Estoque (un)</th>
+                <th class="right">Pedidos (un)</th>
+                <th class="right">Saldo</th>
+                <th class="right">Demanda/sem</th>
+                <th class="right">Cobertura</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-cobertura">
+              <tr>
+                <td colspan="9">
+                  <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <div class="msg">Nenhum upload de estoque encontrado.<br>Suba o relatório "ESTQ ATUAL PP" do Omie para ver a cobertura.</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-body -->
+  </main>
+
+  <!-- CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+  // ── Inicialização ────────────────────────────────────────────
+  initApp('visao-geral');
+
+  const MES_ATUAL = new Date().getMonth() + 1; // 1-12
+
+  // ── KPIs ─────────────────────────────────────────────────────
+  function renderKPIs() {
+    // Faturamento total projetado 2026
+    let fatTotal = 0;
+    for (let m = 1; m <= 12; m++) fatTotal += calcReceitaMensal(m);
+    document.getElementById('kpi-fat').textContent     = formatBRL(fatTotal);
+    document.getElementById('kpi-fat-pct').textContent = `${(fatTotal/100_000_000*100).toFixed(0)}% da meta`;
+
+    // Volume total projetado
+    let volTotal = 0;
+    for (let m = 1; m <= 12; m++) {
+      ['L01','L02','L03'].forEach(l => volTotal += calcDemandaMensal(l, m));
+    }
+    document.getElementById('kpi-vol').textContent = formatInt(volTotal);
+
+    // Ocupação média (mês atual)
+    const ocuL01 = calcOcupacao('L01', MES_ATUAL);
+    const ocuL02 = calcOcupacao('L02', MES_ATUAL);
+    const ocuL03 = calcOcupacao('L03', MES_ATUAL);
+    const ocuMedia = (ocuL01 + ocuL02 + ocuL03) / 3;
+    const ocuEl = document.getElementById('kpi-ocu');
+    ocuEl.textContent = `${ocuMedia.toFixed(0)}%`;
+    ocuEl.className = 'kpi-value ' + (ocuMedia > 90 ? 'vermelho' : ocuMedia > 75 ? 'amarelo' : 'verde');
+
+    // Ocupação por linha (mini stats)
+    ['l01','l02','l03'].forEach((l, i) => {
+      const linha  = ['L01','L02','L03'][i];
+      const ocu    = calcOcupacao(linha, MES_ATUAL);
+      const pct    = Math.min(ocu, 100).toFixed(0);
+      document.getElementById(`ocu-${l}`).textContent = `${pct}%`;
+      document.getElementById(`prog-${l}`).style.width = `${Math.min(ocu, 100)}%`;
+    });
+
+    // Dr Peanut mês atual
+    document.getElementById('dp-mes').textContent = formatInt(DR_PEANUT_2026[MES_ATUAL] || 0);
+
+    // Meta bar
+    const metaPct = Math.min(fatTotal / 100_000_000 * 100, 100);
+    document.getElementById('meta-bar').style.width = metaPct + '%';
+    document.getElementById('meta-txt').textContent  = formatBRL(fatTotal);
+
+    // SKUs em alerta (simulado sem upload — show 0)
+    document.getElementById('kpi-alerta').textContent = '0';
+  }
+
+  // ── Chart 1: Capacidade × Demanda ────────────────────────────
+  function renderChartCapDem() {
+    const labels = MESES.slice(1);
+    const datasets = [];
+
+    ['L01','L02','L03'].forEach((linha, i) => {
+      const cores = ['#FFB81D','#3B82F6','#A78BFA'];
+      const cap   = [];
+      const dem   = [];
+      for (let m = 1; m <= 12; m++) {
+        cap.push(calcCapacidadeMensal(linha, m));
+        dem.push(calcDemandaMensal(linha, m));
+      }
+      datasets.push({
+        label: `Cap ${linha}`,
+        data: cap,
+        type: 'bar',
+        backgroundColor: cores[i] + '22',
+        borderColor: cores[i] + '55',
+        borderWidth: 1,
+        stack: 'cap',
+        barPercentage: 0.6,
+        categoryPercentage: 0.7,
+        order: 2,
+      });
+      datasets.push({
+        label: `Dem ${linha}`,
+        data: dem,
+        type: 'line',
+        borderColor: cores[i],
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        tension: 0.3,
+        order: 1,
+      });
+    });
+
+    new Chart(document.getElementById('chart-cap-dem'), {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { grid: { color: '#1F1F1F' }, ticks: { font: { size: 10 } } },
+          y: {
+            grid: { color: '#1A1A1A' },
+            ticks: {
+              callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${formatInt(ctx.raw)}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Chart 2: Faturamento Mensal ──────────────────────────────
+  function renderChartFaturamento() {
+    const labels   = MESES.slice(1);
+    const receitas = [];
+    let acum       = 0;
+    const acumData = [];
+    const metaAcum = [];
+    const metaMes  = 100_000_000 / 12;
+
+    for (let m = 1; m <= 12; m++) {
+      const r = calcReceitaMensal(m);
+      receitas.push(r);
+      acum += r;
+      acumData.push(acum);
+      metaAcum.push(metaMes * m);
+    }
+
+    new Chart(document.getElementById('chart-fat'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Receita Mensal',
+            data: receitas,
+            type: 'bar',
+            backgroundColor: '#FFB81D33',
+            borderColor: '#FFB81D88',
+            borderWidth: 1,
+            barPercentage: 0.55,
+            order: 3,
+          },
+          {
+            label: 'Acumulado',
+            data: acumData,
+            type: 'line',
+            borderColor: '#22C55E',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 2,
+            tension: 0.3,
+            yAxisID: 'y2',
+            order: 1,
+          },
+          {
+            label: 'Meta R$100M',
+            data: metaAcum,
+            type: 'line',
+            borderColor: 'rgba(255,255,255,0.2)',
+            borderDash: [5, 4],
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            yAxisID: 'y2',
+            order: 2,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { grid: { color: '#1A1A1A' } },
+          y: {
+            position: 'left',
+            grid: { color: '#1A1A1A' },
+            ticks: { callback: v => formatBRL(v) },
+            title: { display: true, text: 'Mensal', color: '#555', font: { size: 10 } }
+          },
+          y2: {
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { callback: v => formatBRL(v) },
+            title: { display: true, text: 'Acumulado', color: '#555', font: { size: 10 } }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${formatBRL(ctx.raw)}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Alert banner ─────────────────────────────────────────────
+  async function renderAlerts() {
+    const alertas = await fetchAlertas();
+    const banner  = document.getElementById('alert-banner');
+    if (alertas.length === 0) {
+      banner.classList.add('hidden');
+      document.getElementById('kpi-alerta').textContent = '0';
+      return;
+    }
+    const criticos = alertas.filter(a => a.tipo === 'cobertura_critica').length;
+    const atencao  = alertas.filter(a => a.tipo === 'cobertura_atencao').length;
+    banner.classList.remove('hidden');
+    if (criticos > 0) {
+      banner.className = 'alert-banner critico';
+      banner.innerHTML = `🔴 <strong>${criticos} SKU(s) crítico(s)</strong> — cobertura &lt; 1 semana. ${atencao > 0 ? `+ ${atencao} em atenção.` : ''} <a href="planejamento.html" style="color:inherit;margin-left:8px;text-decoration:underline;">→ Ver planejamento</a>`;
+    } else {
+      banner.className = 'alert-banner atencao';
+      banner.innerHTML = `🟡 <strong>${atencao} SKU(s)</strong> com cobertura entre 1–2 semanas.`;
+    }
+    document.getElementById('kpi-alerta').textContent = criticos + atencao;
+  }
+
+  // ── Tabela cobertura (com dados reais ou vazia) ───────────────
+  async function renderTabelaCobertura() {
+    const estoque = await fetchEstoqueAtual();
+    if (!estoque || estoque.length === 0) return;
+
+    document.getElementById('estoque-status').textContent =
+      `Semana: ${formatDate(estoque[0]?.semana_ref)}`;
+
+    const tbody = document.getElementById('tbody-cobertura');
+    tbody.innerHTML = estoque.map(e => {
+      const sku  = e.sop_skus || {};
+      const dem  = DEM_SEMANAL[e.sku_codigo] || 0;
+      const cob  = e.cobertura_sem || (dem > 0 ? (e.saldo_unid || 0) / dem : 0);
+      const st   = cob < 1 ? 'critico' : cob < 2 ? 'atencao' : 'ok';
+      const icon = cob < 1 ? '🔴' : cob < 2 ? '🟡' : '🟢';
+      return `
+        <tr>
+          <td><span class="tag-${(sku.linha||'').toLowerCase()}">${sku.linha || '—'}</span></td>
+          <td class="bold" style="font-family:var(--font-mono);font-size:0.75rem;">${e.sku_codigo}</td>
+          <td>${sku.familia || '—'}</td>
+          <td class="right">${formatInt(e.estoque_unid || 0)}</td>
+          <td class="right" style="color:var(--vermelho)">${formatInt(e.pedidos_unid || 0)}</td>
+          <td class="right bold">${formatInt(e.saldo_unid || 0)}</td>
+          <td class="right" style="color:var(--txt-3)">${formatInt(dem)}</td>
+          <td class="right bold">${cob.toFixed(1)} sem</td>
+          <td><span class="badge ${st}">${icon} ${st.charAt(0).toUpperCase()+st.slice(1)}</span></td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Inicializar tudo ─────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    renderKPIs();
+    renderChartCapDem();
+    renderChartFaturamento();
+    await renderAlerts();
+    await renderTabelaCobertura();
+    document.getElementById('last-update').textContent =
+      new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  });
+  </script>
+</body>
+</html>
