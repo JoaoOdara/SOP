@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Dados & Sync</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Layout ─────────────────────────────────────── */
+    .dados-layout{display:grid;grid-template-columns:200px 1fr;gap:0;min-height:calc(100vh - 60px)}
+    .dados-sidebar{border-right:1px solid var(--border);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+    .dados-tab{padding:9px 12px;border-radius:var(--radius);font-family:var(--font-display);font-weight:600;font-size:.82rem;color:var(--txt-2);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:space-between}
+    .dados-tab:hover{background:var(--card);color:var(--txt-1)}
+    .dados-tab.active{background:var(--amarelo-dim);color:var(--amarelo)}
+    .dados-tab .dt-badge{font-family:var(--font-mono);font-size:.65rem;background:var(--border);color:var(--txt-3);padding:1px 5px;border-radius:3px}
+    .dados-tab.ok .dt-badge{background:var(--verde-dim);color:var(--verde)}
+    .dados-tab.warn .dt-badge{background:var(--amarelo-dim);color:var(--amarelo)}
+    .dados-tab.error .dt-badge{background:var(--vermelho-dim);color:var(--vermelho)}
+    .dados-content{padding:20px 24px}
+    .panel{display:none}.panel.active{display:block}
+
+    /* ── Upload zone ─────────────────────────────────── */
+    .upload-zone{
+      border:2px dashed var(--border-2);border-radius:var(--radius-lg);
+      padding:28px 20px;text-align:center;cursor:pointer;
+      transition:all .2s;background:var(--surface);
+    }
+    .upload-zone:hover,.upload-zone.dragover{border-color:var(--amarelo);background:var(--amarelo-dim)}
+    .upload-zone .uz-icon{font-size:1.8rem;margin-bottom:8px;opacity:.5}
+    .upload-zone .uz-title{font-family:var(--font-display);font-weight:700;font-size:.9rem;color:var(--txt-1)}
+    .upload-zone .uz-sub{font-size:.72rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:4px}
+    .upload-zone input[type=file]{display:none}
+
+    /* ── Omie card ───────────────────────────────────── */
+    .omie-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px}
+    .omie-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .omie-status{display:flex;align-items:center;gap:6px;font-size:.72rem;font-family:var(--font-mono)}
+    .omie-status .dot{width:7px;height:7px;border-radius:50%}
+    .omie-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .omie-field label{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:4px}
+    .omie-field input{width:100%}
+    .omie-note{font-size:.7rem;color:var(--txt-3);font-family:var(--font-mono);padding:8px 12px;background:var(--surface);border-radius:var(--radius);border-left:3px solid var(--amarelo);line-height:1.6}
+
+    /* ── Preview table ───────────────────────────────── */
+    .preview-wrap{max-height:300px;overflow-y:auto;border-radius:var(--radius);border:1px solid var(--border)}
+    .preview-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.72rem}
+    .preview-table th{padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--txt-3);position:sticky;top:0}
+    .preview-table td{padding:5px 10px;border-bottom:1px solid rgba(36,36,36,.5);color:var(--txt-2)}
+    .preview-table tr:last-child td{border-bottom:none}
+    .preview-table tr:hover td{background:var(--card-hover)}
+
+    /* ── Status strip ────────────────────────────────── */
+    .sync-strip{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);font-size:.72rem;font-family:var(--font-mono);background:var(--card);border:1px solid var(--border);margin-bottom:14px}
+    .sync-strip .ss-key{color:var(--txt-3)}
+    .sync-strip .ss-val{color:var(--txt-1);font-weight:600}
+    .sync-strip .ss-sep{width:1px;height:14px;background:var(--border)}
+
+    /* ── Progress bar ────────────────────────────────── */
+    .upload-progress{display:none;margin-top:10px}
+    .upload-progress .up-label{font-size:.72rem;font-family:var(--font-mono);color:var(--txt-2);margin-bottom:4px;display:flex;justify-content:space-between}
+    .upload-progress .up-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+    .upload-progress .up-fill{height:100%;background:var(--amarelo);border-radius:2px;width:0%;transition:width .3s}
+
+    /* ── Section ─────────────────────────────────────── */
+    .ds-section{margin-bottom:18px}
+    .ds-section-title{font-family:var(--font-display);font-weight:700;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-3);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .ds-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    .ds-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+    /* ── Omie endpoint badge ─────────────────────────── */
+    .ep-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-family:var(--font-mono);font-size:.68rem;background:var(--azul)16;color:#93C5FD;border:1px solid rgba(59,130,246,.2)}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Dados & Sync</div>
+      <div class="page-subtitle">Upload Omie · Bases de dados · Conferência</div>
+    </div>
+    <div class="page-actions">
+      <span id="db-status-badge" class="badge info">verificando DB...</span>
+    </div>
+  </div>
+
+  <div class="page-body" style="padding:0">
+    <div class="dados-layout">
+
+      <!-- Left tabs -->
+      <div class="dados-sidebar">
+        <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;padding:4px 10px 6px">Bases de Dados</div>
+        <div class="dados-tab active" id="tab-estoque"     onclick="switchTab('estoque',this)">
+          <span>📦 Estoque</span><span class="dt-badge ok" id="badge-estoque">—</span>
+        </div>
+        <div class="dados-tab" id="tab-faturamento" onclick="switchTab('faturamento',this)">
+          <span>💰 Faturamento</span><span class="dt-badge warn" id="badge-fat">—</span>
+        </div>
+        <div class="dados-tab" id="tab-metas"       onclick="switchTab('metas',this)">
+          <span>🎯 Metas Mensais</span><span class="dt-badge" id="badge-metas">—</span>
+        </div>
+        <div class="dados-tab" id="tab-drpeanut"    onclick="switchTab('drpeanut',this)">
+          <span>🥜 Dr Peanut</span><span class="dt-badge ok" id="badge-dp">—</span>
+        </div>
+        <div style="flex:1"></div>
+        <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;padding:4px 10px 6px;margin-top:8px">Integrações</div>
+        <div class="dados-tab" id="tab-omie"        onclick="switchTab('omie',this)">
+          <span>🔗 Omie API</span><span class="dt-badge" id="badge-omie">Config</span>
+        </div>
+        <div class="dados-tab" id="tab-supabase"    onclick="switchTab('supabase',this)">
+          <span>⚡ Supabase</span><span class="dt-badge" id="badge-supa">Config</span>
+        </div>
+      </div>
+
+      <!-- Content panels -->
+      <div class="dados-content">
+
+        <!-- ── ESTOQUE ──────────────────────────────────────── -->
+        <div class="panel active" id="panel-estoque">
+          <div class="sync-strip">
+            <span class="ss-key">Última atualização</span><span class="ss-val" id="est-last-sync">—</span>
+            <div class="ss-sep"></div>
+            <span class="ss-key">Registros</span><span class="ss-val" id="est-count">mock</span>
+            <div class="ss-sep"></div>
+            <span class="ss-key">Fonte</span><span class="ss-val" id="est-source">mock</span>
+          </div>
+
+          <div class="ds-grid-2">
+
+            <div class="ds-section">
+              <div class="ds-section-title">Upload Excel</div>
+              <div class="upload-zone" id="uz-estoque" onclick="document.getElementById('file-estoque').click()"
+                ondragover="event.preventDefault();this.classList.add('dragover')"
+                ondragleave="this.classList.remove('dragover')"
+                ondrop="handleDrop(event,'estoque')">
+                <input type="file" id="file-estoque" accept=".xlsx,.xls,.csv" onchange="handleFile(event,'estoque')">
+                <div class="uz-icon">📊</div>
+                <div class="uz-title">Soltar ou clicar para selecionar</div>
+                <div class="uz-sub">Relatório "ESTQ ATUAL PP" exportado do Omie (.xlsx)</div>
+                <div class="uz-sub" style="margin-top:4px">Colunas esperadas: código · descrição · estoque · unidade</div>
+              </div>
+              <div class="upload-progress" id="prog-estoque">
+                <div class="up-label"><span id="prog-estoque-label">Processando...</span><span id="prog-estoque-pct">0%</span></div>
+                <div class="up-bar"><div class="up-fill" id="prog-estoque-fill"></div></div>
+              </div>
+            </div>
+
+            <div class="ds-section">
+              <div class="ds-section-title">Sincronizar via Omie API</div>
+              <div class="omie-card">
+                <div class="omie-header">
+                  <span style="font-family:var(--font-display);font-weight:700;font-size:.8rem">Importar Estoque Atual</span>
+                  <span class="omie-status" id="omie-est-status">
+                    <div class="dot" style="background:var(--txt-3)"></div>
+                    <span>Não testado</span>
+                  </span>
+                </div>
+                <div class="ep-badge" style="margin-bottom:10px">/api/v1/estoque/consultar/</div>
+                <p style="font-size:.72rem;color:var(--txt-2);font-family:var(--font-mono);margin-bottom:10px;line-height:1.6">
+                  Busca posição de estoque por produto no Omie.<br>Configure as credenciais na aba "Omie API" antes.
+                </p>
+                <button class="btn btn-ghost btn-sm" onclick="syncOmieEstoque()" style="width:100%">
+                  ↺ Sincronizar do Omie
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-section">
+            <div class="ds-section-title">Prévia dos Dados Atuais</div>
+            <div class="preview-wrap">
+              <table class="preview-table">
+                <thead><tr><th>SKU</th><th>Descrição</th><th>Linha</th><th>Estoque (un)</th><th>Pedidos</th><th>Saldo</th><th>Cob. (sem)</th><th>Status</th></tr></thead>
+                <tbody id="preview-estoque"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── FATURAMENTO ─────────────────────────────────── -->
+        <div class="panel" id="panel-faturamento">
+          <div class="sync-strip">
+            <span class="ss-key">Última atualização</span><span class="ss-val" id="fat-last-sync">—</span>
+            <div class="ss-sep"></div>
+            <span class="ss-key">Período</span><span class="ss-val" id="fat-periodo">Jan–Mar/26</span>
+            <div class="ss-sep"></div>
+            <span class="ss-key">Fonte</span><span class="ss-val">mock</span>
+          </div>
+
+          <div class="ds-grid-2">
+            <div class="ds-section">
+              <div class="ds-section-title">Upload Excel</div>
+              <div class="upload-zone" id="uz-fat" onclick="document.getElementById('file-fat').click()"
+                ondragover="event.preventDefault();this.classList.add('dragover')"
+                ondragleave="this.classList.remove('dragover')"
+                ondrop="handleDrop(event,'faturamento')">
+                <input type="file" id="file-fat" accept=".xlsx,.xls,.csv" onchange="handleFile(event,'faturamento')">
+                <div class="uz-icon">📈</div>
+                <div class="uz-title">Relatório de Faturamento</div>
+                <div class="uz-sub">"Faturamento por MêsAno" exportado do Omie (.xlsx)</div>
+                <div class="uz-sub" style="margin-top:4px">Colunas esperadas: SKU · mês · volume · receita</div>
+              </div>
+            </div>
+            <div class="ds-section">
+              <div class="ds-section-title">Sincronizar via Omie API</div>
+              <div class="omie-card">
+                <div class="omie-header">
+                  <span style="font-family:var(--font-display);font-weight:700;font-size:.8rem">Importar Faturamento</span>
+                  <span class="omie-status" id="omie-fat-status">
+                    <div class="dot" style="background:var(--txt-3)"></div>Não testado
+                  </span>
+                </div>
+                <div class="ep-badge" style="margin-bottom:10px">/api/v1/faturamento/pesquisar/</div>
+                <div style="margin-bottom:8px">
+                  <label style="font-size:.66rem;color:var(--txt-3);font-family:var(--font-display);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Período</label>
+                  <div style="display:flex;gap:6px;margin-top:4px">
+                    <input type="month" id="fat-de" style="flex:1" value="2026-01">
+                    <input type="month" id="fat-ate" style="flex:1" value="2026-03">
+                  </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="syncOmieFaturamento()" style="width:100%">
+                  ↺ Sincronizar do Omie
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-section">
+            <div class="ds-section-title">Faturamento por Mês (atual)</div>
+            <div class="preview-wrap">
+              <table class="preview-table">
+                <thead><tr><th>Mês</th><th>Volume (un)</th><th>Volume Prev</th><th>Desvio</th><th>Receita</th><th>Receita Prev</th><th>Desvio</th></tr></thead>
+                <tbody id="preview-fat"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── METAS MENSAIS ───────────────────────────────── -->
+        <div class="panel" id="panel-metas">
+          <p style="font-size:.78rem;color:var(--txt-2);font-family:var(--font-mono);margin-bottom:16px;line-height:1.7">
+            Defina as metas mensais de volume e receita por SKU/família. Estas metas alimentam os gráficos de Gap e os indicadores de Acuracidade.
+          </p>
+          <div class="ds-section">
+            <div class="ds-section-title">Upload Plano Mensal</div>
+            <div class="upload-zone" onclick="document.getElementById('file-metas').click()"
+              ondragover="event.preventDefault();this.classList.add('dragover')"
+              ondragleave="this.classList.remove('dragover')">
+              <input type="file" id="file-metas" accept=".xlsx,.xls" onchange="handleFile(event,'metas')">
+              <div class="uz-icon">🎯</div>
+              <div class="uz-title">Plano Mensal 2026</div>
+              <div class="uz-sub">Arquivo: PLANO_AJUSTADO · Colunas: SKU · Jan · Fev · ... · Dez</div>
+            </div>
+          </div>
+          <div class="ds-section">
+            <div class="ds-section-title">Metas Mensais de Volume (unidades)</div>
+            <div class="preview-wrap">
+              <table class="preview-table" id="table-metas-vol">
+                <thead><tr><th>SKU</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th></tr></thead>
+                <tbody id="preview-metas"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── DR PEANUT ───────────────────────────────────── -->
+        <div class="panel" id="panel-drpeanut">
+          <p style="font-size:.78rem;color:var(--txt-2);font-family:var(--font-mono);margin-bottom:16px;line-height:1.7">
+            Plano de co-packing Dr Peanut para 2026. Volumes alocados em L03 — não competem com produção própria Crocante, mas consomem capacidade da linha.
+          </p>
+          <div class="ds-section">
+            <div class="ds-section-title">Upload Plano Dr Peanut</div>
+            <div class="upload-zone" onclick="document.getElementById('file-dp').click()"
+              ondragover="event.preventDefault();this.classList.add('dragover')"
+              ondragleave="this.classList.remove('dragover')">
+              <input type="file" id="file-dp" accept=".xlsx,.xls" onchange="handleFile(event,'drpeanut')">
+              <div class="uz-icon">🥜</div>
+              <div class="uz-title">Plano Dr Peanut 2026</div>
+              <div class="uz-sub">Arquivo: Plano_dr_peanut_2026 · Colunas: mês · volume (un)</div>
+            </div>
+          </div>
+          <div class="ds-section">
+            <div class="ds-section-title">Plano Atual (Dr Peanut · L03)</div>
+            <div class="preview-wrap">
+              <table class="preview-table">
+                <thead><tr><th>Mês</th><th>Volume (un)</th><th>Caixas (48un)</th><th>Paletes (105cx)</th><th>% Cap L03</th></tr></thead>
+                <tbody id="preview-dp"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── OMIE API CONFIG ─────────────────────────────── -->
+        <div class="panel" id="panel-omie">
+          <div class="omie-card" style="max-width:560px;margin-bottom:18px">
+            <div class="ds-section-title" style="margin-bottom:12px">Credenciais Omie</div>
+            <div class="omie-fields">
+              <div class="omie-field">
+                <label>App Key</label>
+                <input type="text" id="omie-key" placeholder="0000000000000" style="width:100%">
+              </div>
+              <div class="omie-field">
+                <label>App Secret</label>
+                <input type="password" id="omie-secret" placeholder="••••••••••••••••••••" style="width:100%">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <button class="btn btn-ghost btn-sm" onclick="testOmie()" style="flex:1">🔍 Testar conexão</button>
+              <button class="btn btn-primary btn-sm" onclick="saveOmie()" style="flex:1">💾 Salvar credenciais</button>
+            </div>
+            <div id="omie-test-result" style="display:none;padding:8px 10px;border-radius:var(--radius);font-family:var(--font-mono);font-size:.72rem;margin-bottom:10px"></div>
+          </div>
+
+          <div class="omie-note" style="max-width:560px;margin-bottom:16px">
+            ⚠ <strong>CORS:</strong> chamadas diretas ao Omie a partir do browser podem ser bloqueadas por CORS.
+            Se o teste falhar com "CORS error", use a <strong>Supabase Edge Function</strong> abaixo como proxy intermediário.
+            O upload Excel continua funcionando independentemente.
+          </div>
+
+          <div class="chart-card" style="max-width:560px">
+            <div class="chart-hd"><div>
+              <div class="chart-title">Supabase Edge Function (proxy CORS)</div>
+              <div class="chart-sub">Cole este código em Supabase → Edge Functions → New function "omie-proxy"</div>
+            </div></div>
+            <pre style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:var(--font-mono);font-size:.68rem;color:var(--txt-2);overflow-x:auto;margin-top:8px;line-height:1.7"><code id="edge-fn-code">// supabase/functions/omie-proxy/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+serve(async (req) => {
+  const body = await req.json();
+  const res = await fetch("https://app.omie.com.br/api/v1/" + body.endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body.payload),
+  });
+  const data = await res.json();
+  return new Response(JSON.stringify(data), {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+});</code></pre>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px">
+              <button class="btn btn-ghost btn-sm" onclick="copyEdgeFn()">📋 Copiar código</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SUPABASE CONFIG ─────────────────────────────── -->
+        <div class="panel" id="panel-supabase">
+          <div class="chart-card" style="max-width:520px;margin-bottom:16px">
+            <div class="chart-hd"><div>
+              <div class="chart-title">Configuração Supabase</div>
+              <div class="chart-sub">Projeto: khqbimmcibutfrfmkoxr</div>
+            </div></div>
+
+            <div style="margin-bottom:12px">
+              <label style="font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;display:block;margin-bottom:4px">Project URL</label>
+              <input type="text" id="sb-url" style="width:100%" placeholder="https://xxxx.supabase.co">
+            </div>
+            <div style="margin-bottom:14px">
+              <label style="font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;display:block;margin-bottom:4px">Anon Key (public)</label>
+              <input type="password" id="sb-key" style="width:100%" placeholder="eyJ...">
+              <div style="font-size:.68rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:3px">Project Settings → API → anon public key</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="testSupabase()" style="flex:1">🔍 Testar conexão</button>
+              <button class="btn btn-primary btn-sm" onclick="saveSupabase()" style="flex:1">💾 Salvar e recarregar</button>
+            </div>
+            <div id="sb-test-result" style="display:none;margin-top:10px;padding:8px 10px;border-radius:var(--radius);font-family:var(--font-mono);font-size:.72rem"></div>
+          </div>
+
+          <div class="omie-note" style="max-width:520px">
+            💡 As credenciais são salvas no <strong>localStorage</strong> do browser — apenas neste dispositivo.
+            A chave <code>anon</code> é pública e segura para usar no frontend com as policies RLS configuradas.
+            Nunca use a chave <code>service_role</code> aqui.
+          </div>
+        </div>
+
+      </div><!-- /dados-content -->
+    </div>
+  </div>
+</main>
+
+<!-- SheetJS for Excel parsing -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+initApp('dados');
+
+// ── DB status check ───────────────────────────────────────────
+function updateDbBadge() {
+  const el = document.getElementById('db-status-badge');
+  if (isDbReady()) {
+    el.className = 'badge ok'; el.textContent = '● Supabase conectado';
+    document.getElementById('badge-supa').textContent = '✓';
+    document.getElementById('badge-supa').className = 'dt-badge ok';
+  } else {
+    el.className = 'badge warn'; el.textContent = '○ modo mock (sem DB)';
+  }
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.dados-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+// ── Render mock previews ──────────────────────────────────────
+function renderEstoquePreview() {
+  document.getElementById('est-count').textContent = MOCK.cobertura.length + ' SKUs';
+  document.getElementById('est-source').textContent = isDbReady() ? 'Supabase' : 'mock';
+  document.getElementById('est-last-sync').textContent = isDbReady() ? '—' : 'mock data';
+  document.getElementById('preview-estoque').innerHTML = MOCK.cobertura.map(c=>{
+    const saldo = c.estoque_un - c.pedidos_un;
+    return `<tr><td>${c.sku}</td><td>${c.desc}</td><td>${c.linha}</td>
+      <td>${formatInt(c.estoque_un)}</td><td style="color:var(--vermelho)">${formatInt(c.pedidos_un)}</td>
+      <td style="color:${saldo<0?'var(--vermelho)':'var(--verde)'}">${formatInt(saldo)}</td>
+      <td style="color:${coverageBg(c.cob_sem)}">${c.cob_sem.toFixed(1)}</td>
+      <td><span class="badge ${coverageClass(c.status)}">${c.status}</span></td></tr>`;
+  }).join('');
+}
+
+function renderFatPreview() {
+  document.getElementById('preview-fat').innerHTML = MOCK.mensal.map(m=>{
+    const vd = m.vol_real!=null ? m.vol_real-m.vol_prev : null;
+    const rd = m.rec_real!=null ? m.rec_real-m.rec_prev : null;
+    return `<tr>
+      <td><strong>${m.label}</strong> ${m.is_actual?'<span style="color:var(--verde);font-size:.65rem">●</span>':'<span style="color:var(--txt-3);font-size:.65rem">○</span>'}</td>
+      <td>${m.vol_real!=null?formatInt(m.vol_real):'—'}</td>
+      <td style="color:var(--txt-3)">${formatInt(m.vol_prev)}</td>
+      <td style="color:${vd==null?'var(--txt-3)':vd>=0?'var(--verde)':'var(--vermelho)'}">${vd!=null?(vd>=0?'+':'')+formatInt(vd):'—'}</td>
+      <td>${m.rec_real!=null?formatBRL(m.rec_real):'—'}</td>
+      <td style="color:var(--txt-3)">${formatBRL(m.rec_prev)}</td>
+      <td style="color:${rd==null?'var(--txt-3)':rd>=0?'var(--verde)':'var(--vermelho)'}">${rd!=null?(rd>=0?'+':'')+formatBRL(rd):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderDrPeanutPreview() {
+  const tbody = document.getElementById('preview-dp');
+  tbody.innerHTML = MESES.slice(1).map((mes,i)=>{
+    const m=i+1, vol=DR_PEANUT[m]||0;
+    const cxs=Math.ceil(vol/48), paletes=Math.ceil(cxs/105);
+    const pctL03=(vol/calcCapMensal('L03',m)*100).toFixed(0);
+    return `<tr>
+      <td><strong>${mes}/26</strong></td>
+      <td>${vol>0?formatInt(vol):'<span style="color:var(--txt-3)">—</span>'}</td>
+      <td>${vol>0?formatInt(cxs):'—'}</td>
+      <td>${vol>0?paletes:'—'}</td>
+      <td style="color:${vol>0?'var(--azul)':'var(--txt-3)'}">${vol>0?pctL03+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMetasPreview() {
+  const skus = MOCK.cobertura.map(c=>({sku:c.sku,desc:c.desc}));
+  const tbody = document.getElementById('preview-metas');
+  tbody.innerHTML = skus.slice(0,8).map(s=>{
+    const cells = MESES.slice(1).map((_,i)=>{
+      const m=i+1, saz=SAZONALIDADE[m];
+      const base = DEM_SEMANAL[s.sku]||0;
+      const vol = Math.round(base*saz*4.333);
+      return `<td>${vol>0?(vol/1000).toFixed(0)+'K':'—'}</td>`;
+    }).join('');
+    return `<tr><td><strong>${s.sku}</strong></td>${cells}</tr>`;
+  }).join('');
+}
+
+// ── Excel upload handler ──────────────────────────────────────
+function handleDrop(e, tipo) {
+  e.preventDefault();
+  document.getElementById('uz-'+tipo).classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length) processFile(files[0], tipo);
+}
+
+function handleFile(e, tipo) {
+  const f = e.target.files[0];
+  if (f) processFile(f, tipo);
+}
+
+async function processFile(file, tipo) {
+  const progWrap = document.getElementById('prog-'+tipo);
+  if (progWrap) { progWrap.style.display='block'; }
+  setProgress(tipo, 10, 'Lendo arquivo...');
+
+  try {
+    const ab = await file.arrayBuffer();
+    const wb = XLSX.read(ab, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+
+    setProgress(tipo, 40, 'Processando linhas...');
+    const headers = rows[0]||[];
+    const data = rows.slice(1).filter(r=>r.some(c=>c!=null&&c!==''));
+
+    setProgress(tipo, 70, `${data.length} registros encontrados...`);
+
+    if (tipo==='estoque') await uploadEstoque(headers, data);
+    else if (tipo==='faturamento') await uploadFaturamento(headers, data);
+    else if (tipo==='metas') await uploadMetas(headers, data);
+    else if (tipo==='drpeanut') await uploadDrPeanut(headers, data);
+
+    setProgress(tipo, 100, '✓ Concluído');
+    showToast(`Upload ${tipo} concluído — ${data.length} registros processados`, 'ok');
+    setTimeout(()=>{ if(progWrap) progWrap.style.display='none'; }, 2000);
+    renderEstoquePreview();
+
+  } catch(err) {
+    setProgress(tipo, 0, '✗ Erro');
+    showToast('Erro ao processar arquivo: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+function setProgress(tipo, pct, label) {
+  const fill = document.getElementById('prog-'+tipo+'-fill');
+  const lbl  = document.getElementById('prog-'+tipo+'-label');
+  const pctEl= document.getElementById('prog-'+tipo+'-pct');
+  if (fill) fill.style.width = pct+'%';
+  if (lbl)  lbl.textContent  = label;
+  if (pctEl) pctEl.textContent = pct+'%';
+}
+
+// ── Upload to Supabase functions ──────────────────────────────
+// These map the Excel columns to Supabase schema
+async function uploadEstoque(headers, rows) {
+  if (!isDbReady()) { showToast('Supabase não configurado — dados disponíveis somente em memória','warn'); return; }
+  // Map: try common column names from Omie export
+  const iCod  = findCol(headers,['código','cod','codigo','sku','cód. produto','cód.prod.']);
+  const iDesc = findCol(headers,['descrição','descricao','produto','descrição do produto']);
+  const iEst  = findCol(headers,['estoque','saldo','qtde','quantidade','estoque atual']);
+  if (iCod<0||iEst<0) { showToast('Colunas não encontradas. Verifique o relatório: código + estoque','error'); return; }
+
+  const upsertRows = rows.map(r=>({
+    sku: String(r[iCod]||'').trim(),
+    descricao: String(r[iDesc]||'').trim(),
+    estoque_atual: parseFloat(String(r[iEst]).replace(',','.'))||0,
+    data_ref: new Date().toISOString().split('T')[0],
+    fonte: 'excel_upload',
+  })).filter(r=>r.sku);
+
+  const {error} = await dbUpsert('sop_estoque_semanal', upsertRows, 'sku,data_ref');
+  if (error) throw new Error(error.message);
+}
+
+async function uploadFaturamento(headers, rows) {
+  if (!isDbReady()) { showToast('Supabase não configurado','warn'); return; }
+  const iSku = findCol(headers,['sku','código','cod','cód.prod.']);
+  const iMes = findCol(headers,['mês','mes','month','período']);
+  const iVol = findCol(headers,['volume','qtde','quantidade']);
+  const iRec = findCol(headers,['receita','valor','faturamento','total']);
+  if (iSku<0||iVol<0) { showToast('Colunas não encontradas. Verifique: SKU + volume','error'); return; }
+
+  const upsertRows = rows.map(r=>({
+    sku: String(r[iSku]||'').trim(),
+    mes_ref: String(r[iMes]||'').trim(),
+    volume_real: parseFloat(String(r[iVol]).replace(',','.'))||0,
+    receita_real: iRec>=0 ? parseFloat(String(r[iRec]).replace(',','.'))||0 : null,
+    criado_em: new Date().toISOString(),
+  })).filter(r=>r.sku);
+
+  const {error} = await dbUpsert('sop_vendas_semanais', upsertRows, 'sku,mes_ref');
+  if (error) throw new Error(error.message);
+}
+
+async function uploadMetas(headers, rows) {
+  if (!isDbReady()) { showToast('Supabase não configurado','warn'); return; }
+  // Format: SKU | Jan | Fev | ... | Dez
+  const meses_idx = {};
+  MESES.slice(1).forEach((mes,i)=>{ const ci=findCol(headers,[mes.toLowerCase(),mes]); if(ci>=0) meses_idx[i+1]=ci; });
+  const iSku = findCol(headers,['sku','código','cod']);
+
+  const upsertRows = [];
+  rows.forEach(r=>{
+    const sku = String(r[iSku]||'').trim();
+    if (!sku) return;
+    Object.entries(meses_idx).forEach(([mes,ci])=>{
+      const v = parseFloat(String(r[ci]||'0').replace(',','.'))||0;
+      if (v>0) upsertRows.push({sku, mes:parseInt(mes), ano:2026, volume_meta:v});
+    });
+  });
+
+  const {error} = await dbUpsert('sop_metas_mensais', upsertRows, 'sku,mes,ano');
+  if (error) throw new Error(error.message);
+}
+
+async function uploadDrPeanut(headers, rows) {
+  if (!isDbReady()) { showToast('Supabase não configurado','warn'); return; }
+  const iMes = findCol(headers,['mês','mes','month']);
+  const iVol = findCol(headers,['volume','qtde','quantidade','un','unidades']);
+
+  const upsertRows = rows.map(r=>({
+    mes: parseInt(r[iMes])||0,
+    ano: 2026,
+    volume_previsto: parseFloat(String(r[iVol]||'0').replace(',','.'))||0,
+  })).filter(r=>r.mes>0&&r.mes<=12);
+
+  const {error} = await dbUpsert('sop_dr_peanut', upsertRows, 'mes,ano');
+  if (error) throw new Error(error.message);
+}
+
+function findCol(headers, names) {
+  for (const name of names) {
+    const i = headers.findIndex(h=>String(h||'').toLowerCase().trim().includes(name.toLowerCase()));
+    if (i>=0) return i;
+  }
+  return -1;
+}
+
+// ── Omie API ──────────────────────────────────────────────────
+function getOmieConfig() {
+  return {
+    key:    localStorage.getItem('omie-key')||'',
+    secret: localStorage.getItem('omie-secret')||'',
+    proxy:  localStorage.getItem('omie-proxy-url')||null,
+  };
+}
+
+async function callOmie(endpoint, call, params) {
+  const cfg = getOmieConfig();
+  if (!cfg.key || !cfg.secret) { showToast('Configure as credenciais Omie primeiro','warn'); return null; }
+
+  const payload = { call, app_key:cfg.key, app_secret:cfg.secret, param:[params||{}] };
+  const url = cfg.proxy
+    ? cfg.proxy  // Supabase Edge Function URL
+    : `https://app.omie.com.br/api/v1/${endpoint}/`;
+
+  const body = cfg.proxy ? JSON.stringify({endpoint, payload}) : JSON.stringify(payload);
+
+  try {
+    const r = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body,
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch(e) {
+    if (e.message.includes('CORS')||e.message.includes('Failed to fetch')) {
+      showToast('CORS bloqueado — configure a Supabase Edge Function como proxy','error',5000);
+    } else {
+      showToast('Erro Omie: '+e.message, 'error');
+    }
+    return null;
+  }
+}
+
+async function testOmie() {
+  const key    = document.getElementById('omie-key').value.trim();
+  const secret = document.getElementById('omie-secret').value.trim();
+  if (!key||!secret) { showToast('Preencha App Key e App Secret','warn'); return; }
+
+  const resultEl = document.getElementById('omie-test-result');
+  resultEl.style.display='block';
+  resultEl.style.cssText += ';background:var(--card);border:1px solid var(--border);color:var(--txt-2)';
+  resultEl.textContent = '⏳ Testando conexão com Omie...';
+
+  // Try a simple listing call
+  const payload = {call:'ListarEmpresasId', app_key:key, app_secret:secret, param:[{pagina:1,registros_por_pagina:1}]};
+  try {
+    const r = await fetch('https://app.omie.com.br/api/v1/geral/empresas/', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.faultstring) {
+        resultEl.style.cssText += ';background:var(--vermelho-dim);color:#FF7B85;border-color:rgba(238,39,55,.3)';
+        resultEl.textContent = '✗ Credenciais inválidas: ' + d.faultstring;
+      } else {
+        resultEl.style.cssText += ';background:var(--verde-dim);color:var(--verde);border-color:rgba(34,197,94,.3)';
+        resultEl.textContent = '✓ Conexão Omie OK — credenciais válidas';
+        localStorage.setItem('omie-key', key);
+        localStorage.setItem('omie-secret', secret);
+      }
+    }
+  } catch(e) {
+    if (e.message.includes('CORS')||e.message.includes('fetch')) {
+      resultEl.style.cssText += ';background:var(--amarelo-dim);color:var(--amarelo);border-color:rgba(255,184,29,.2)';
+      resultEl.textContent = '⚠ CORS bloqueado — acesse via Supabase Edge Function (proxy). Ver instruções acima.';
+    } else {
+      resultEl.style.cssText += ';background:var(--vermelho-dim);color:#FF7B85';
+      resultEl.textContent = '✗ Erro: ' + e.message;
+    }
+  }
+}
+
+async function syncOmieEstoque() {
+  showToast('Buscando estoque no Omie...', 'ok', 8000);
+  const data = await callOmie('estoque', 'ConsultarEstoque', {
+    nAno: 2026, nMes: new Date().getMonth()+1
+  });
+  if (!data) return;
+  showToast('Estoque Omie importado — ' + (data.produtos?.length||0) + ' produtos', 'ok');
+}
+
+async function syncOmieFaturamento() {
+  const de  = document.getElementById('fat-de').value;
+  const ate = document.getElementById('fat-ate').value;
+  showToast(`Buscando faturamento ${de} → ${ate} no Omie...`, 'ok', 8000);
+  const data = await callOmie('faturamento', 'PesquisarFaturamento', {
+    periodo_inicio: de, periodo_fim: ate
+  });
+  if (!data) return;
+  showToast('Faturamento Omie importado', 'ok');
+}
+
+function saveOmie() {
+  const key    = document.getElementById('omie-key').value.trim();
+  const secret = document.getElementById('omie-secret').value.trim();
+  if (!key||!secret) { showToast('Preencha Key e Secret','warn'); return; }
+  localStorage.setItem('omie-key', key);
+  localStorage.setItem('omie-secret', secret);
+  showToast('Credenciais Omie salvas no browser', 'ok');
+  document.getElementById('badge-omie').textContent = '✓';
+  document.getElementById('badge-omie').className   = 'dt-badge ok';
+}
+
+// ── Supabase config ───────────────────────────────────────────
+function loadSupabaseFields() {
+  document.getElementById('sb-url').value = SUPABASE_URL||'';
+  document.getElementById('sb-key').value = SUPABASE_KEY||'';
+}
+
+async function testSupabase() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  const el  = document.getElementById('sb-test-result');
+  el.style.display='block';
+  el.style.cssText+=';background:var(--card);border:1px solid var(--border);color:var(--txt-2)';
+  el.textContent='⏳ Testando...';
+  try {
+    const cli = supabase.createClient(url, key);
+    const {error} = await cli.from('sop_config_geral').select('chave').limit(1);
+    if (error) throw error;
+    el.style.cssText+=';background:var(--verde-dim);color:var(--verde);border-color:rgba(34,197,94,.3)';
+    el.textContent='✓ Supabase conectado — tabela sop_config_geral acessível';
+  } catch(e) {
+    el.style.cssText+=';background:var(--vermelho-dim);color:#FF7B85;border-color:rgba(238,39,55,.3)';
+    el.textContent='✗ Falha: '+e.message;
+  }
+}
+
+function saveSupabase() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  if (!url||!key) { showToast('Preencha URL e Key','warn'); return; }
+  // These will be used by config.js on page load
+  // Store in localStorage — on reload, config.js will be overridden by these
+  localStorage.setItem('sb-url-override', url);
+  localStorage.setItem('sb-key-override', key);
+  showToast('Credenciais salvas — recarregando...','ok');
+  setTimeout(()=>location.reload(), 1500);
+}
+
+// ── Clipboard ─────────────────────────────────────────────────
+function copyEdgeFn() {
+  const code = document.getElementById('edge-fn-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>showToast('Código copiado!','ok'));
+}
+
+// ── Load saved Omie credentials ────────────────────────────────
+function loadSavedCredentials() {
+  const key = localStorage.getItem('omie-key');
+  if (key) {
+    const el = document.getElementById('omie-key');
+    if (el) el.value = key;
+    document.getElementById('badge-omie').textContent = '✓ salvo';
+    document.getElementById('badge-omie').className   = 'dt-badge ok';
+  }
+  const secret = localStorage.getItem('omie-secret');
+  if (secret) { const el=document.getElementById('omie-secret'); if(el) el.value=secret; }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  updateDbBadge();
+  renderEstoquePreview();
+  renderFatPreview();
+  renderDrPeanutPreview();
+  renderMetasPreview();
+  loadSavedCredentials();
+  loadSupabaseFields();
+  document.getElementById('est-last-sync').textContent = new Date().toLocaleDateString('pt-BR');
+  document.getElementById('fat-last-sync').textContent = 'Jan–Mar/26 (mock)';
+});
+</script>
+</body>
+</html>
