@@ -137,6 +137,7 @@
                   Cabeçalho na linha 5 · Dados a partir da linha 6<br>
                   Colunas: Código · Descrição · Estoque Atual · Previsão/Saídas</div>
               </div>
+              <div id="est-diag"></div>
               <div class="prog-row" id="prog-est">
                 <div class="prog-label"><span id="prog-est-lbl">Processando...</span><span id="prog-est-pct">0%</span></div>
                 <div class="prog-track"><div class="prog-fill" id="prog-est-fill"></div></div>
@@ -444,8 +445,18 @@ async function processFile(file, tipo) {
       const header = rows[headerIdx]||[];
       const data   = rows.slice(headerIdx+1).filter(r=>r.some(c=>c!==''&&c!=null));
 
-      // Debug: log first 3 header values to console
-      console.log('[Estoque] headerIdx='+headerIdx+' header='+JSON.stringify(header.slice(0,6)));
+      // Show detected columns in a debug panel under the upload zone
+      const diagEl = document.getElementById('est-diag');
+      if (diagEl) {
+        const colInfo = header.slice(0,8).map((h,i)=>`<span style="font-family:var(--font-mono);font-size:.62rem;color:var(--txt-3)">[${i}] <strong style="color:var(--txt-2)">${String(h).substring(0,25)}</strong></span>`).join(' &nbsp;·&nbsp; ');
+        diagEl.innerHTML = `<div style="margin-top:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:.65rem;font-family:var(--font-mono);color:var(--txt-3)">
+          Cabeçalho detectado (linha ${headerIdx+1}): ${colInfo}<br>
+          Colunas mapeadas → Código:[${iCod}] Desc:[${iDesc}] Estoque:[${iEst}] Pedidos:[${iPed}]
+        </div>`;
+      }
+      console.log('[Estoque] headerIdx='+headerIdx+' iCod='+iCod+' iEst='+iEst+' iPed='+iPed);
+      console.log('[Estoque] header=', header);
+      if (data[0]) console.log('[Estoque] first row=', data[0]);
 
       const iCod  = findCol(header,['codigo','cod produto','codigo produto','cód','product code']);
       const iDesc = findCol(header,['descri','produto','produto','description','nome']);
@@ -555,23 +566,47 @@ function findCol(headers, names){
 
 // ── Render previews ───────────────────────────────────────────
 function renderEstoquePreview(data) {
-  const source = data || MOCK.cobertura.map(c=>({sku:c.sku,desc:c.desc,estoque_cx:Math.ceil(c.estoque_un/72),pedidos_cx:Math.ceil(c.pedidos_un/72)}));
-  document.getElementById('est-count').textContent = source.length+' SKUs';
-  document.getElementById('prev-est').innerHTML = (data||MOCK.cobertura).map((c,i)=>{
-    const estUn = c.estoque_un || (c.estoque_cx||0)*72;
-    const pedUn = c.pedidos_un || (c.pedidos_cx||0)*72;
-    const saldo = estUn-pedUn;
-    const linha = MOCK.cobertura.find(x=>x.sku===c.sku)?.linha||'—';
-    const cob   = MOCK.cobertura.find(x=>x.sku===c.sku)?.cob_sem||'—';
-    const st    = MOCK.cobertura.find(x=>x.sku===c.sku)?.status||'ok';
-    return `<tr><td class="bold">${c.sku}</td><td>${c.desc||'—'}</td><td>${linha}</td>
-      <td>${formatInt(estUn)}</td>
-      <td style="color:var(--vermelho)">${formatInt(pedUn)}</td>
-      <td style="color:${saldo<0?'var(--vermelho)':'var(--verde)'}">${formatInt(saldo)}</td>
-      <td style="color:${typeof cob==='number'?coverageBg(cob):'var(--txt-3)'}">${typeof cob==='number'?cob.toFixed(1)+' sem':cob}</td>
-      <td><span class="badge ${coverageClass(st)}">${st}</span></td></tr>`;
+  if (!data || data.length === 0) {
+    data = MOCK.cobertura.map(c=>({
+      sku:c.sku, desc:c.desc,
+      estoque_cx: Math.ceil(c.estoque_un/72),
+      pedidos_cx: Math.ceil(c.pedidos_un/72),
+      un_cx:72, _source:'mock'
+    }));
+  }
+  document.getElementById('est-count').textContent = data.length + ' SKUs';
+  document.getElementById('prev-est').innerHTML = data.map(c=>{
+    const unCx  = c.un_cx || 72;
+    const estCx = c.estoque_cx || 0;
+    const pedCx = c.pedidos_cx || 0;
+    const estUn = c.estoque_un != null ? c.estoque_un : Math.round(estCx * unCx);
+    const pedUn = c.pedidos_un != null ? c.pedidos_un : Math.round(pedCx * unCx);
+    const saldo = estUn - pedUn;
+    const mock   = MOCK.cobertura.find(x=>x.sku===c.sku);
+    const linha  = mock?.linha || c.linha || '—';
+    const demSem = mock?.dem_sem || (DEM_SEMANAL[c.sku] || 0);
+    const cob    = c.cob_sem != null ? c.cob_sem
+                 : (demSem > 0 ? saldo / demSem : null);
+    const st     = c.status ||
+                   (cob == null ? 'ok' : cob < 1 ? 'critico' : cob < 2 ? 'atencao' : 'ok');
+    const cobStr   = cob != null ? cob.toFixed(1)+' sem' : '—';
+    const cobColor = cob != null ? coverageBg(cob) : 'var(--txt-3)';
+    const isMock   = c._source === 'mock';
+    const dispEst  = estCx > 0 ? formatInt(estCx)+' cx' : formatInt(estUn)+' un';
+    const dispPed  = pedCx > 0 ? formatInt(pedCx)+' cx' : formatInt(pedUn)+' un';
+    return '<tr'+(isMock?' style="opacity:.6"':'')+'>'+
+      '<td class="bold">'+c.sku+(isMock?' <span style="font-size:.6rem;color:var(--txt-3)">(mock)</span>':'')+'</td>'+
+      '<td>'+(c.desc||'—')+'</td><td>'+linha+'</td>'+
+      '<td>'+dispEst+'</td>'+
+      '<td style="color:var(--vermelho)">'+dispPed+'</td>'+
+      '<td style="color:'+(saldo<0?'var(--vermelho)':'var(--verde)')+'">'+formatInt(saldo)+' un</td>'+
+      '<td style="color:'+cobColor+'">'+cobStr+'</td>'+
+      '<td><span class="badge '+coverageClass(st)+'">'+
+        (st==='critico'?'🔴 crítico':st==='atencao'?'🟡 atenção':'🟢 ok')+
+      '</span></td></tr>';
   }).join('');
 }
+
 
 function renderFatPreview(fatData) {
   if (!fatData) { document.getElementById('prev-fat').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--txt-3)">Nenhum dado carregado</td></tr>'; return; }
