@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Ações e Follow-up</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Cards de ação ─────────────────────────────────────── */
+    .acao-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+      padding:14px 16px;margin-bottom:8px;border-left-width:4px;transition:background .15s}
+    .acao-card:hover{background:var(--card-hover)}
+    .acao-card.done{opacity:.6}
+    .acao-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:10px}
+    .acao-title{font-family:var(--font-display);font-weight:700;font-size:.85rem;color:var(--txt-1);flex:1}
+    .acao-title.done{text-decoration:line-through;opacity:.6}
+    .acao-body{font-size:.72rem;color:var(--txt-2);font-family:var(--font-mono);line-height:1.6;margin-bottom:8px}
+    .acao-footer{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .acao-pill{font-size:.63rem;font-family:var(--font-mono);padding:2px 8px;border-radius:3px;
+      background:var(--surface);color:var(--txt-2);border:1px solid var(--border)}
+    .acao-prazo{font-size:.65rem;font-family:var(--font-mono);color:var(--txt-3)}
+    .acao-prazo.vencido{color:var(--vermelho);font-weight:600}
+    .acao-prazo.proximo{color:var(--amarelo)}
+    .acao-actions{display:flex;gap:4px;margin-left:auto}
+    .acao-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);
+      padding:3px 8px;font-family:var(--font-mono);font-size:.63rem;cursor:pointer;
+      color:var(--txt-2);transition:all .12s}
+    .acao-btn:hover{border-color:var(--amarelo);color:var(--amarelo)}
+    .acao-btn.del:hover{border-color:var(--vermelho);color:var(--vermelho)}
+
+    /* ── Stats ─────────────────────────────────────────────── */
+    .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px}
+    .stat-val{font-family:var(--font-display);font-weight:700;font-size:1.5rem}
+    .stat-label{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-3);
+      font-family:var(--font-display);font-weight:700;margin-bottom:4px}
+    .stat-sub{font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px}
+
+    /* ── Modal / Form ──────────────────────────────────────── */
+    .modal-overlay{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.6);
+      display:none;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+      padding:24px;width:90%;max-width:520px;box-shadow:var(--shadow-pop)}
+    .modal-title{font-family:var(--font-display);font-weight:700;font-size:1rem;margin-bottom:16px;
+      display:flex;justify-content:space-between;align-items:center}
+    .modal-close{background:none;border:none;color:var(--txt-3);font-size:1.2rem;cursor:pointer;padding:4px}
+    .modal-close:hover{color:var(--txt-1)}
+    .form-row{margin-bottom:12px}
+    .form-row label{display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;
+      color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:4px}
+    .form-row input,.form-row textarea,.form-row select{width:100%;background:var(--surface);
+      border:1px solid var(--border-2);border-radius:var(--radius);color:var(--txt-1);
+      font-family:var(--font-mono);font-size:.8rem;padding:8px 10px;outline:none}
+    .form-row input:focus,.form-row textarea:focus,.form-row select:focus{border-color:var(--amarelo)}
+    .form-row textarea{resize:vertical;min-height:60px}
+    .form-row select{appearance:none;cursor:pointer}
+    .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+    /* ── Filtro ─────────────────────────────────────────────── */
+    .acao-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+    .acao-search{flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border-2);
+      border-radius:var(--radius);color:var(--txt-1);font-family:var(--font-mono);
+      font-size:.78rem;padding:7px 12px;outline:none}
+    .acao-search:focus{border-color:var(--amarelo)}
+    .sort-select{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--radius);
+      color:var(--txt-2);font-family:var(--font-mono);font-size:.72rem;padding:5px 8px;outline:none;
+      appearance:none;cursor:pointer}
+
+    /* Empty state */
+    .empty-acoes{text-align:center;padding:40px 20px;color:var(--txt-3);font-family:var(--font-mono);font-size:.8rem}
+    .empty-acoes-icon{font-size:2rem;margin-bottom:10px;opacity:.3}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Ações e Follow-up</div>
+      <div class="page-subtitle">Decisões Abertas · Prazos · Responsáveis · Histórico</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="openModal()">+ Nova Ação</button>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Abertas</div>
+        <div class="stat-val amarelo" id="st-abertas">—</div>
+        <div class="stat-sub">aguardando execução</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vencidas</div>
+        <div class="stat-val vermelho" id="st-vencidas">—</div>
+        <div class="stat-sub">prazo ultrapassado</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Concluídas</div>
+        <div class="stat-val verde" id="st-concluidas">—</div>
+        <div class="stat-sub">total geral</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Canceladas</div>
+        <div class="stat-val" id="st-canceladas" style="color:var(--txt-3)">—</div>
+        <div class="stat-sub">descartadas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Taxa de Resolução</div>
+        <div class="stat-val" id="st-taxa">—</div>
+        <div class="stat-sub">concluídas / total</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="acao-toolbar">
+      <input type="text" class="acao-search" id="acao-search" placeholder="🔍  Buscar por título, responsável ou ciclo..." oninput="renderList()">
+      <div class="tab-group" id="filter-tabs">
+        <div class="tab active" onclick="setFilter('todos',this)">Todas</div>
+        <div class="tab" onclick="setFilter('aberta',this)">Abertas</div>
+        <div class="tab" onclick="setFilter('vencida',this)">Vencidas</div>
+        <div class="tab" onclick="setFilter('concluida',this)">Concluídas</div>
+        <div class="tab" onclick="setFilter('cancelada',this)">Canceladas</div>
+      </div>
+      <select class="sort-select" id="sort-select" onchange="renderList()">
+        <option value="prazo">Ordenar: Prazo ↑</option>
+        <option value="prioridade">Ordenar: Prioridade</option>
+        <option value="recente">Ordenar: Mais recente</option>
+        <option value="responsavel">Ordenar: Responsável</option>
+      </select>
+      <span style="font-size:.68rem;color:var(--txt-3);font-family:var(--font-mono)" id="count-label">—</span>
+    </div>
+
+    <!-- List -->
+    <div id="acoes-list"></div>
+
+  </div>
+</main>
+
+<!-- ── MODAL NOVA/EDITAR AÇÃO ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">Nova Ação</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <label>Título</label>
+      <input type="text" id="f-titulo" placeholder="Descreva a ação de forma clara e objetiva">
+    </div>
+    <div class="form-row">
+      <label>Descrição / Contexto</label>
+      <textarea id="f-descricao" placeholder="Detalhes, justificativa, impacto esperado..."></textarea>
+    </div>
+    <div class="form-grid-3">
+      <div class="form-row">
+        <label>Responsável</label>
+        <select id="f-responsavel">
+          <option>PCP</option>
+          <option>Produção</option>
+          <option>Comercial</option>
+          <option>Compras</option>
+          <option>Financeiro</option>
+          <option>Diretoria</option>
+          <option>Expedição</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Prioridade</label>
+        <select id="f-prioridade">
+          <option value="critico">🔴 Crítico</option>
+          <option value="atencao" selected>🟡 Atenção</option>
+          <option value="info">ℹ Informativo</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Prazo</label>
+        <input type="date" id="f-prazo">
+      </div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-row">
+        <label>Origem</label>
+        <select id="f-origem">
+          <option>Reunião S&OP</option>
+          <option>S&OE Semanal</option>
+          <option>Demanda</option>
+          <option>Supply</option>
+          <option>Estoque</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Ciclo Referência</label>
+        <input type="text" id="f-ciclo" placeholder="Ex: Mar/26">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar" onclick="salvarAcao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// AÇÕES — CRUD completo via Supabase (sop_acoes)
+// ══════════════════════════════════════════════════════════════
+
+var acoes = [];
+var statusFilter = 'todos';
+var editingId = null;
+
+var PRIO_ORDER = {critico:0, atencao:1, info:2};
+var PRIO_COR   = {critico:'var(--vermelho)', atencao:'var(--amarelo)', info:'var(--azul)'};
+var PRIO_BADGE = {critico:'🔴 Crítico', atencao:'🟡 Atenção', info:'ℹ Info'};
+
+// ── Load from Supabase ───────────────────────────────────────
+async function loadAcoes() {
+  if (!isDbReady()) {
+    // Fallback seed data
+    acoes = [
+      {id:1,titulo:'Priorizar L01 para Dark + Zero Trad',descricao:'Cobertura < 1 semana. Risco de ruptura imediata.',responsavel:'PCP',prioridade:'critico',status:'aberta',prazo:'2026-03-28',origem:'Reunião S&OP',ciclo_ref:'Mar/26'},
+      {id:2,titulo:'Confirmar HE Jul–Set',descricao:'L01 a 125%, L02 a 134% sem HE.',responsavel:'Produção',prioridade:'atencao',status:'aberta',prazo:'2026-04-05',origem:'Reunião S&OP',ciclo_ref:'Mar/26'},
+    ];
+    return;
+  }
+  var rows = await dbSelect('sop_acoes', {order:'criado_em', asc:false});
+  acoes = rows;
+}
+
+// ── Computed status (aberta pode ser vencida) ────────────────
+function getStatus(a) {
+  if (a.status === 'concluida' || a.status === 'cancelada') return a.status;
+  if (!a.prazo) return 'aberta';
+  var prazo = new Date(a.prazo+'T23:59:59');
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  return prazo < hoje ? 'vencida' : 'aberta';
+}
+
+// ── Stats ────────────────────────────────────────────────────
+function renderStats() {
+  var abertas=0, vencidas=0, concluidas=0, canceladas=0;
+  acoes.forEach(function(a) {
+    var s = getStatus(a);
+    if (s==='aberta')    abertas++;
+    if (s==='vencida')   vencidas++;
+    if (s==='concluida') concluidas++;
+    if (s==='cancelada') canceladas++;
+  });
+  document.getElementById('st-abertas').textContent    = abertas;
+  document.getElementById('st-vencidas').textContent   = vencidas;
+  document.getElementById('st-concluidas').textContent = concluidas;
+  document.getElementById('st-canceladas').textContent = canceladas;
+  var total = acoes.length;
+  document.getElementById('st-taxa').textContent = total > 0 ? Math.round(concluidas/total*100)+'%' : '—';
+}
+
+// ── Filter + Sort + Render ───────────────────────────────────
+function renderList() {
+  var q = (document.getElementById('acao-search').value||'').toLowerCase().trim();
+  var sortBy = document.getElementById('sort-select').value;
+
+  var filtered = acoes.filter(function(a) {
+    var s = getStatus(a);
+    if (statusFilter !== 'todos' && s !== statusFilter) return false;
+    if (q) {
+      var hay = [a.titulo,a.descricao,a.responsavel,a.ciclo_ref,a.origem].join(' ').toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort(function(a,b) {
+    if (sortBy==='prazo') return (a.prazo||'9999').localeCompare(b.prazo||'9999');
+    if (sortBy==='prioridade') return (PRIO_ORDER[a.prioridade]||9) - (PRIO_ORDER[b.prioridade]||9);
+    if (sortBy==='recente') return (b.id||0) - (a.id||0);
+    if (sortBy==='responsavel') return (a.responsavel||'').localeCompare(b.responsavel||'');
+    return 0;
+  });
+
+  document.getElementById('count-label').textContent = filtered.length+' ação(ões)';
+
+  if (!filtered.length) {
+    document.getElementById('acoes-list').innerHTML =
+      '<div class="empty-acoes"><div class="empty-acoes-icon">'+(acoes.length===0?'📋':'🔍')+'</div>'+
+      (acoes.length===0?'Nenhuma ação registrada. Clique em "+ Nova Ação" para começar.':'Nenhuma ação encontrada com o filtro atual.')+'</div>';
+    return;
+  }
+
+  document.getElementById('acoes-list').innerHTML = filtered.map(function(a) {
+    var st = getStatus(a);
+    var isDone = st==='concluida' || st==='cancelada';
+    var cor = PRIO_COR[a.prioridade] || 'var(--border)';
+
+    // Badge de status
+    var stBadge;
+    if (st==='concluida')  stBadge = '<span class="badge ok">✓ Concluída</span>';
+    else if (st==='vencida') stBadge = '<span class="badge critico">⚠ Vencida</span>';
+    else if (st==='cancelada') stBadge = '<span class="badge" style="background:var(--border);color:var(--txt-3)">✕ Cancelada</span>';
+    else stBadge = '<span class="badge info">Aberta</span>';
+
+    // Prazo display
+    var prazoTxt = '—';
+    var prazoCls = '';
+    if (a.prazo) {
+      var pDate = new Date(a.prazo+'T12:00:00');
+      prazoTxt = pDate.toLocaleDateString('pt-BR');
+      if (!isDone) {
+        var diff = Math.ceil((pDate - new Date())/(1000*60*60*24));
+        if (diff < 0)      { prazoTxt += ' ('+Math.abs(diff)+'d atrás)'; prazoCls = 'vencido'; }
+        else if (diff <= 3) { prazoTxt += ' (em '+diff+'d)'; prazoCls = 'proximo'; }
+      }
+    }
+
+    // Action buttons
+    var btns = '';
+    if (st==='aberta' || st==='vencida') {
+      btns = '<button class="acao-btn" onclick="concluirAcao('+a.id+')" title="Concluir">✓</button>' +
+             '<button class="acao-btn" onclick="openModal('+a.id+')" title="Editar">✎</button>' +
+             '<button class="acao-btn del" onclick="cancelarAcao('+a.id+')" title="Cancelar">✕</button>';
+    } else if (st==='concluida') {
+      btns = '<button class="acao-btn" onclick="reabrirAcao('+a.id+')" title="Reabrir">↺</button>' +
+             '<button class="acao-btn del" onclick="excluirAcao('+a.id+')" title="Excluir">🗑</button>';
+    } else {
+      btns = '<button class="acao-btn" onclick="reabrirAcao('+a.id+')" title="Reabrir">↺</button>' +
+             '<button class="acao-btn del" onclick="excluirAcao('+a.id+')" title="Excluir">🗑</button>';
+    }
+
+    return '<div class="acao-card '+(isDone?'done':'')+'" style="border-left-color:'+cor+'">' +
+      '<div class="acao-hd">' +
+        '<div class="acao-title '+(isDone?'done':'')+'">'+esc(a.titulo)+'</div>' +
+        stBadge +
+      '</div>' +
+      (a.descricao ? '<div class="acao-body">'+esc(a.descricao)+'</div>' : '') +
+      '<div class="acao-footer">' +
+        '<span class="acao-pill">👤 '+esc(a.responsavel)+'</span>' +
+        '<span class="acao-prazo '+prazoCls+'">📅 '+prazoTxt+'</span>' +
+        (a.origem ? '<span class="acao-pill" style="font-size:.6rem">'+esc(a.origem)+'</span>' : '') +
+        (a.ciclo_ref ? '<span style="font-size:.6rem;color:var(--txt-3);font-family:var(--font-mono)">'+esc(a.ciclo_ref)+'</span>' : '') +
+        '<div class="acao-actions">'+btns+'</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function setFilter(f, el) {
+  statusFilter = f;
+  document.querySelectorAll('#filter-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderList();
+}
+
+// ── Modal ────────────────────────────────────────────────────
+function openModal(id) {
+  editingId = id || null;
+  var el = document.getElementById('modal-overlay');
+
+  if (id) {
+    var a = acoes.find(function(x){return x.id===id;});
+    if (!a) return;
+    document.getElementById('modal-title-text').textContent = 'Editar Ação #'+id;
+    document.getElementById('f-titulo').value      = a.titulo || '';
+    document.getElementById('f-descricao').value   = a.descricao || '';
+    document.getElementById('f-responsavel').value  = a.responsavel || 'PCP';
+    document.getElementById('f-prioridade').value   = a.prioridade || 'atencao';
+    document.getElementById('f-prazo').value        = a.prazo || '';
+    document.getElementById('f-origem').value       = a.origem || 'Reunião S&OP';
+    document.getElementById('f-ciclo').value        = a.ciclo_ref || '';
+  } else {
+    document.getElementById('modal-title-text').textContent = 'Nova Ação';
+    document.getElementById('f-titulo').value = '';
+    document.getElementById('f-descricao').value = '';
+    document.getElementById('f-responsavel').value = 'PCP';
+    document.getElementById('f-prioridade').value = 'atencao';
+    document.getElementById('f-prazo').value = '';
+    document.getElementById('f-origem').value = 'Reunião S&OP';
+    // Auto-fill ciclo ref
+    var now = new Date();
+    var mAbr = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    document.getElementById('f-ciclo').value = mAbr[now.getMonth()+1]+'/'+String(now.getFullYear()).slice(2);
+  }
+
+  el.classList.add('open');
+  document.getElementById('f-titulo').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+}
+
+// ── CRUD ─────────────────────────────────────────────────────
+async function salvarAcao() {
+  var titulo = document.getElementById('f-titulo').value.trim();
+  if (!titulo) { showToast('Título é obrigatório','error'); return; }
+
+  var row = {
+    titulo:       titulo,
+    descricao:    document.getElementById('f-descricao').value.trim() || null,
+    responsavel:  document.getElementById('f-responsavel').value,
+    prioridade:   document.getElementById('f-prioridade').value,
+    prazo:        document.getElementById('f-prazo').value || null,
+    origem:       document.getElementById('f-origem').value,
+    ciclo_ref:    document.getElementById('f-ciclo').value.trim() || null,
+    atualizado_em: new Date().toISOString(),
+  };
+
+  if (editingId) {
+    // Update
+    if (isDbReady()) {
+      var {error} = await db.from('sop_acoes').update(row).eq('id', editingId);
+      if (error) { showToast('Erro: '+error.message,'error'); return; }
+    }
+    var idx = acoes.findIndex(function(a){return a.id===editingId;});
+    if (idx >= 0) Object.assign(acoes[idx], row);
+    logChange('Ações', 'Ação #'+editingId+' editada', titulo);
+    showToast('Ação atualizada','ok');
+  } else {
+    // Insert
+    row.status = 'aberta';
+    if (isDbReady()) {
+      var {data, error} = await db.from('sop_acoes').insert(row).select('id').single();
+      if (error) { showToast('Erro: '+error.message,'error'); return; }
+      row.id = data.id;
+    } else {
+      row.id = Date.now();
+    }
+    acoes.unshift(row);
+    logChange('Ações', 'Nova ação criada', titulo);
+    showToast('Ação criada','ok');
+  }
+
+  closeModal();
+  renderStats();
+  renderList();
+}
+
+async function concluirAcao(id) {
+  if (isDbReady()) {
+    await db.from('sop_acoes').update({status:'concluida', concluido_em:new Date().toISOString().split('T')[0], atualizado_em:new Date().toISOString()}).eq('id',id);
+  }
+  var a = acoes.find(function(x){return x.id===id;});
+  if (a) { a.status='concluida'; a.concluido_em=new Date().toISOString().split('T')[0]; }
+  logChange('Ações', 'Ação #'+id+' concluída', a?a.titulo:'');
+  showToast('Ação concluída ✓','ok');
+  renderStats(); renderList();
+}
+
+async function cancelarAcao(id) {
+  if (!confirm('Cancelar esta ação?')) return;
+  if (isDbReady()) {
+    await db.from('sop_acoes').update({status:'cancelada', atualizado_em:new Date().toISOString()}).eq('id',id);
+  }
+  var a = acoes.find(function(x){return x.id===id;});
+  if (a) a.status='cancelada';
+  logChange('Ações', 'Ação #'+id+' cancelada', a?a.titulo:'');
+  showToast('Ação cancelada','warn');
+  renderStats(); renderList();
+}
+
+async function reabrirAcao(id) {
+  if (isDbReady()) {
+    await db.from('sop_acoes').update({status:'aberta', concluido_em:null, atualizado_em:new Date().toISOString()}).eq('id',id);
+  }
+  var a = acoes.find(function(x){return x.id===id;});
+  if (a) { a.status='aberta'; a.concluido_em=null; }
+  logChange('Ações', 'Ação #'+id+' reaberta', a?a.titulo:'');
+  showToast('Ação reaberta','ok');
+  renderStats(); renderList();
+}
+
+async function excluirAcao(id) {
+  if (!confirm('Excluir permanentemente esta ação?')) return;
+  if (isDbReady()) {
+    await db.from('sop_acoes').delete().eq('id',id);
+  }
+  acoes = acoes.filter(function(a){return a.id!==id;});
+  logChange('Ações', 'Ação #'+id+' excluída');
+  showToast('Ação excluída','warn');
+  renderStats(); renderList();
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('acoes');
+  await loadAcoes();
+  renderStats();
+  renderList();
+});
+</script>
+</body>
+</html>
