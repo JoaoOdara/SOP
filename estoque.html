@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Estoque & Serviço</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .serv-gauge{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0}
+    .serv-gauge .sg-val{font-family:var(--font-display);font-weight:700;font-size:2rem;line-height:1}
+    .serv-gauge .sg-label{font-size:.68rem;color:var(--txt-3);font-family:var(--font-mono)}
+    .serv-gauge .sg-meta{font-size:.72rem;font-family:var(--font-mono);margin-top:2px}
+    .otif-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .otif-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+    .otif-cell .oc-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:5px}
+    .otif-cell .oc-val{font-family:var(--font-display);font-weight:700;font-size:1.4rem}
+    .otif-cell .oc-target{font-size:.68rem;font-family:var(--font-mono);color:var(--txt-3);margin-top:2px}
+    .rupt-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:.65rem;font-weight:700;font-family:var(--font-mono)}
+    .rupt-badge.critico{background:var(--vermelho-dim);color:var(--vermelho)}
+    .rupt-badge.atencao{background:var(--laranja-dim);color:var(--laranja)}
+    .rupt-badge.ok{background:var(--verde-dim);color:var(--verde)}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Estoque & Serviço</div>
+      <div class="page-subtitle">Cobertura · Risco de Ruptura · Excessos · Nível de Serviço · 2026</div>
+    </div>
+    <div class="page-actions">
+      <div class="tab-group">
+        <div class="tab active" onclick="setSort('cobertura',this)">Cobertura ↑</div>
+        <div class="tab" onclick="setSort('risco',this)">Risco</div>
+        <div class="tab" onclick="setSort('familia',this)">Família</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- KPIs -->
+    <div class="kpi-grid-4">
+      <div class="kpi-card verde">
+        <div class="kpi-label">Cobertura Média</div>
+        <div class="kpi-value" id="kpi-cob-media">—</div>
+        <div class="kpi-unit">semanas · meta mínima: 2 sem</div>
+      </div>
+      <div class="kpi-card vermelho">
+        <div class="kpi-label">SKUs em Ruptura / Risco</div>
+        <div class="kpi-value vermelho" id="kpi-ruptura">—</div>
+        <div class="kpi-unit" id="kpi-ruptura-unit">críticos + atenção</div>
+      </div>
+      <div class="kpi-card amarelo">
+        <div class="kpi-label">SKUs Excesso / Slow</div>
+        <div class="kpi-value" id="kpi-excesso">—</div>
+        <div class="kpi-unit">&gt; 8 semanas de cobertura</div>
+      </div>
+      <div class="kpi-card azul">
+        <div class="kpi-label">OTIF Atual</div>
+        <div class="kpi-value sm" id="kpi-otif">—</div>
+        <div class="kpi-unit">meta: 98% · Fill Rate: <span id="kpi-fill">—</span></div>
+      </div>
+    </div>
+
+    <!-- Row: Coverage bars + Service level -->
+    <div class="grid-2-1">
+
+      <!-- Coverage bars -->
+      <div class="chart-card">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Cobertura por SKU</div>
+            <div class="chart-sub">Semanas de estoque disponível · linha vertical = meta 2 semanas</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:.68rem;font-family:var(--font-mono);color:var(--vermelho)">●&lt;1sem</span>
+            <span style="font-size:.68rem;font-family:var(--font-mono);color:var(--laranja)">●1–2sem</span>
+            <span style="font-size:.68rem;font-family:var(--font-mono);color:var(--amarelo)">●2–4sem</span>
+            <span style="font-size:.68rem;font-family:var(--font-mono);color:var(--verde)">●&gt;4sem</span>
+          </div>
+        </div>
+        <div id="cov-bars" style="padding-top:4px"></div>
+      </div>
+
+      <!-- Service level panel -->
+      <div class="chart-card">
+        <div class="chart-hd"><div><div class="chart-title">Nível de Serviço</div><div class="chart-sub">OTIF · Fill Rate · Rupturas</div></div></div>
+        <div class="serv-gauge">
+          <div class="sg-val" id="sg-otif">—</div>
+          <div class="sg-label">OTIF — On Time In Full</div>
+          <div class="sg-meta" id="sg-otif-delta">—</div>
+        </div>
+        <div class="prog-wrap" style="height:6px;margin:8px 0">
+          <div class="prog-fill verde" id="sg-prog" style="width:0%"></div>
+        </div>
+        <div class="otif-grid">
+          <div class="otif-cell">
+            <div class="oc-label">Fill Rate</div>
+            <div class="oc-val" id="oc-fill" style="color:var(--verde)">—</div>
+            <div class="oc-target">meta: 99%</div>
+          </div>
+          <div class="otif-cell">
+            <div class="oc-label">Rupturas Ativas</div>
+            <div class="oc-val" id="oc-rupt" style="color:var(--vermelho)">—</div>
+            <div class="oc-target">SKUs sem estoque</div>
+          </div>
+          <div class="otif-cell">
+            <div class="oc-label">SKUs Críticos</div>
+            <div class="oc-val" id="oc-crit" style="color:var(--amarelo)">—</div>
+            <div class="oc-target">&lt; 1 semana cobertura</div>
+          </div>
+          <div class="otif-cell">
+            <div class="oc-label">Slow Movers</div>
+            <div class="oc-val" id="oc-slow" style="color:var(--lilas)">—</div>
+            <div class="oc-target">&gt; 8 sem sem giro</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Coverage trend chart -->
+    <div class="chart-card mb-16">
+      <div class="chart-hd">
+        <div>
+          <div class="chart-title">Evolução da Cobertura — Principais SKUs</div>
+          <div class="chart-sub">Semanas de cobertura média por família · tendência 6 meses</div>
+        </div>
+        <div class="chart-legend" id="cov-legend"></div>
+      </div>
+      <canvas id="chart-cov-trend" height="150"></canvas>
+    </div>
+
+    <!-- Risk table -->
+    <div class="section-hd">
+      <div class="section-title">Análise de <em>Risco por SKU</em></div>
+      <div class="section-divider"></div>
+    </div>
+    <div class="table-card" style="margin-bottom:0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Descrição</th>
+            <th>Família</th>
+            <th>Linha</th>
+            <th class="right">Estoque (un)</th>
+            <th class="right">Pedidos (un)</th>
+            <th class="right">Saldo</th>
+            <th class="right">Dem/Sem</th>
+            <th class="right">Cobertura</th>
+            <th class="center">Risco</th>
+            <th class="right">Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-estoque"></tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+let sortMode = 'cobertura';
+
+// ── KPIs ─────────────────────────────────────────────────────
+function renderKPIs() {
+  const s = MOCK.servico;
+  const criticos = MOCK.cobertura.filter(c=>c.status==='critico').length;
+  const atencao  = MOCK.cobertura.filter(c=>c.status==='atencao').length;
+  const excesso  = MOCK.cobertura.filter(c=>c.cob_sem>8).length;
+
+  const cobMedia = MOCK.cobertura.reduce((s,c)=>s+c.cob_sem,0)/MOCK.cobertura.length;
+  const cobEl    = document.getElementById('kpi-cob-media');
+  cobEl.textContent = `${cobMedia.toFixed(1)} sem`;
+  cobEl.className   = 'kpi-value '+(cobMedia<2?'vermelho':cobMedia<3?'amarelo':'verde');
+
+  document.getElementById('kpi-ruptura').textContent      = criticos + atencao;
+  document.getElementById('kpi-ruptura-unit').textContent = `${criticos} crítico${criticos!==1?'s':''} · ${atencao} atenção`;
+
+  document.getElementById('kpi-excesso').textContent = excesso;
+  document.getElementById('kpi-otif').textContent    = `${s.otif_atual}%`;
+  document.getElementById('kpi-otif').style.color    = s.otif_atual>=s.otif_meta?'var(--verde)':s.otif_atual>=96?'var(--amarelo)':'var(--vermelho)';
+  document.getElementById('kpi-fill').textContent    = `${s.fill_rate}%`;
+
+  // Service panel
+  document.getElementById('sg-otif').textContent = `${s.otif_atual}%`;
+  document.getElementById('sg-otif').style.color  = s.otif_atual>=s.otif_meta?'var(--verde)':'var(--amarelo)';
+  const delta = s.otif_atual - s.otif_meta;
+  document.getElementById('sg-otif-delta').textContent = `${delta>=0?'+':''}${delta.toFixed(1)}pp vs meta ${s.otif_meta}%`;
+  document.getElementById('sg-otif-delta').style.color = delta>=0?'var(--verde)':'var(--vermelho)';
+  document.getElementById('sg-prog').style.width = `${(s.otif_atual/100)*100}%`;
+  document.getElementById('oc-fill').textContent = `${s.fill_rate}%`;
+  document.getElementById('oc-rupt').textContent = s.rupturas;
+  document.getElementById('oc-crit').textContent = criticos;
+  document.getElementById('oc-slow').textContent = s.slow_movers;
+}
+
+// ── Coverage bars ─────────────────────────────────────────────
+function renderCovBars() {
+  const sorted = getSorted();
+  const maxCob = Math.max(...sorted.map(c=>c.cob_sem), 12);
+  const target = 2; // semanas meta
+  document.getElementById('cov-bars').innerHTML = sorted.map(c=>{
+    const pct    = Math.min(c.cob_sem/maxCob*100,100);
+    const tPct   = target/maxCob*100;
+    const color  = coverageBg(c.cob_sem);
+    return `
+      <div class="cov-bar-row">
+        <div class="cov-bar-label">
+          <div>${c.desc}</div>
+          <div class="cov-bar-sub">${c.sku} · ${c.linha}</div>
+        </div>
+        <div class="cov-bar-track">
+          <div class="cov-bar-fill" style="width:${pct}%;background:${color}"></div>
+          <div class="cov-bar-target" style="left:${tPct}%"></div>
+        </div>
+        <div class="cov-bar-value" style="color:${color}">${c.cob_sem.toFixed(1)}s</div>
+        <div class="cov-bar-status">
+          <span class="rupt-badge ${coverageClass(c.status)}">${c.status==='critico'?'!':c.status==='atencao'?'~':'✓'}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Coverage trend chart ──────────────────────────────────────
+function renderChartCovTrend() {
+  // Simulated 6-month history per family
+  const families = [
+    { label:'Clássico',  data:[3.1,2.8,2.4,2.0,1.9,1.7], color:'#FFB81D' },
+    { label:'Mini/Zero', data:[4.2,3.8,3.5,3.8,4.1,3.8], color:'#3B82F6' },
+    { label:'Crocante',  data:[8.5,8.2,7.9,8.1,8.4,8.5], color:'#A78BFA' },
+  ];
+  const labels = ['Out/25','Nov/25','Dez/25','Jan/26','Fev/26','Mar/26'];
+
+  const legend = document.getElementById('cov-legend');
+  legend.innerHTML = families.map(f=>`<div class="leg-item"><div class="leg-dot" style="background:${f.color}"></div>${f.label}</div>`).join('');
+  legend.innerHTML += `<div class="leg-item"><div class="leg-dash" style="color:var(--txt-3)"></div>Meta 2sem</div>`;
+
+  new Chart(document.getElementById('chart-cov-trend'),{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        ...families.map(f=>({ label:f.label, data:f.data, borderColor:f.color, backgroundColor:f.color+'18', fill:false, tension:.3, borderWidth:2, pointRadius:3 })),
+        { label:'Meta', data:Array(labels.length).fill(2), borderColor:'rgba(255,255,255,0.2)', borderDash:[5,3], backgroundColor:'transparent', pointRadius:0, borderWidth:1.5 },
+      ]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{min:0,grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:v=>v+' sem'}}
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw.toFixed(1)} sem`}}}
+    }
+  });
+}
+
+// ── Risk table ────────────────────────────────────────────────
+function getSorted() {
+  const data = [...MOCK.cobertura];
+  if(sortMode==='cobertura') data.sort((a,b)=>a.cob_sem-b.cob_sem);
+  else if(sortMode==='risco') data.sort((a,b)=>{const o={critico:0,atencao:1,ok:2};return o[a.status]-o[b.status];});
+  else data.sort((a,b)=>a.familia.localeCompare(b.familia));
+  return data;
+}
+
+function renderRiskTable() {
+  const acoes = { critico:'→ Produzir urgente esta semana', atencao:'→ Programar na próxima semana', ok:'→ Monitorar' };
+  document.getElementById('tbody-estoque').innerHTML = getSorted().map(c=>{
+    const saldo = c.estoque_un - c.pedidos_un;
+    return `<tr>
+      <td class="bold mono">${c.sku}</td>
+      <td class="name">${c.desc}</td>
+      <td>${c.familia}</td>
+      <td class="tag-${c.linha.toLowerCase()}">${c.linha}</td>
+      <td class="right">${formatInt(c.estoque_un)}</td>
+      <td class="right vermelho">${formatInt(c.pedidos_un)}</td>
+      <td class="right bold" style="color:${saldo<0?'var(--vermelho)':'var(--txt-1)'}">${formatInt(saldo)}</td>
+      <td class="right dim">${formatInt(c.dem_sem)}</td>
+      <td class="right bold" style="color:${coverageBg(c.cob_sem)}">${c.cob_sem.toFixed(1)} sem</td>
+      <td class="center"><span class="badge ${coverageClass(c.status)}">${c.status==='critico'?'🔴 Crítico':c.status==='atencao'?'🟡 Atenção':'🟢 OK'}</span></td>
+      <td class="right" style="font-size:.7rem;color:${c.status==='critico'?'var(--vermelho)':c.status==='atencao'?'var(--amarelo)':'var(--txt-3)'}">${acoes[c.status]}</td>
+    </tr>`;
+  }).join('');
+}
+
+function setSort(mode, el) {
+  sortMode = mode;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderCovBars();
+  renderRiskTable();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderKPIs();
+  renderCovBars();
+  renderChartCovTrend();
+  renderRiskTable();
+});
+</script>
+</body>
+</html>

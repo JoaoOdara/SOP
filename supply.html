@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Supply / Capacidade</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Ocu chip ─────────────────────── */
+    .ocu-chip{display:inline-block;padding:2px 7px;border-radius:3px;font-size:.67rem;
+      font-weight:600;min-width:46px;text-align:center;font-family:var(--font-mono)}
+    .ocu-chip.ok  {background:rgba(34,197,94,.15);  color:var(--verde)}
+    .ocu-chip.warn{background:rgba(249,115,22,.15); color:var(--laranja)}
+    .ocu-chip.high{background:rgba(255,184,29,.15); color:var(--amarelo)}
+    .ocu-chip.crit{background:rgba(238,39,55,.15);  color:var(--vermelho)}
+
+    /* ── Cap cards ──────────────────────── */
+    .cap-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px}
+    .cap-card{background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-lg);padding:16px;border-top-width:3px}
+    .cap-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .cap-card-linha{font-family:var(--font-display);font-weight:700;font-size:1.1rem}
+    .cap-card-desc{font-size:.68rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px}
+    .cap-card-data{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .ccs-label{font-size:.6rem;color:var(--txt-3);text-transform:uppercase;letter-spacing:.07em;
+      font-family:var(--font-display);font-weight:700;margin-bottom:3px}
+    .ccs-val{font-family:var(--font-display);font-weight:700;font-size:1.05rem}
+    .ccs-unit{font-size:.63rem;color:var(--txt-3);font-family:var(--font-mono)}
+    .cap-card-note{margin-top:10px;font-size:.64rem;color:var(--txt-3);font-family:var(--font-mono)}
+
+    /* ── HE / Turnos grids ─────────────── */
+    .he-grid-wrap{overflow-x:auto}
+    .he-grid{
+      display:grid;grid-template-columns:100px repeat(12,1fr);
+      gap:3px;min-width:720px;font-family:var(--font-mono);font-size:.72rem;
+    }
+    .hg-hd{padding:5px 3px;text-align:center;font-family:var(--font-display);font-weight:700;
+      font-size:.62rem;letter-spacing:.07em;text-transform:uppercase;color:var(--txt-3)}
+    .hg-hd.left{text-align:left;padding-left:2px}
+    .hg-label{padding:5px 4px;font-family:var(--font-display);font-weight:700;
+      font-size:.78rem;display:flex;align-items:center}
+    .hg-sublabel{padding:4px 4px;font-family:var(--font-mono);font-size:.67rem;
+      color:var(--txt-3);display:flex;align-items:center;padding-left:10px}
+    .hg-cell{padding:2px;display:flex;align-items:center;justify-content:center}
+    .hg-sep{grid-column:1/-1;height:3px;background:var(--border);border-radius:2px;margin:3px 0}
+    .he-input{
+      width:100%;text-align:center;padding:4px 2px;box-sizing:border-box;
+      background:var(--surface);border:1px solid var(--border-2);border-radius:4px;
+      color:var(--amarelo);font-family:var(--font-mono);font-size:.72rem;outline:none;
+    }
+    .he-input:focus{border-color:var(--amarelo)}
+    .turno-input{
+      width:100%;text-align:center;padding:4px 2px;box-sizing:border-box;
+      background:var(--surface);border:1px solid var(--border-2);border-radius:4px;
+      color:var(--azul);font-family:var(--font-mono);font-size:.72rem;outline:none;
+    }
+    .turno-input:focus{border-color:var(--azul)}
+
+    /* ── Bottleneck ────────────────────── */
+    .bn-item{padding:8px 0;border-bottom:1px solid var(--border)}
+    .bn-item:last-child{border-bottom:none}
+    .bn-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:4px}
+    .bn-fill{height:100%;border-radius:3px;transition:width .4s}
+
+    /* ── Planejado x Efetivo mini table ── */
+    .pvse-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.72rem;margin-top:4px}
+    .pvse-table th{padding:5px 8px;text-align:center;font-family:var(--font-display);
+      font-weight:700;font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;
+      color:var(--txt-3);border-bottom:1px solid var(--border);background:var(--surface)}
+    .pvse-table th.left{text-align:left}
+    .pvse-table td{padding:5px 8px;text-align:center;border-bottom:1px solid rgba(36,36,36,.4)}
+    .pvse-table tr:last-child td{border-bottom:none}
+    .pvse-table tr:hover td{background:var(--card-hover)}
+
+    /* ── Turno cap pill ─────────────────── */
+    .tcap-pill{display:inline-block;padding:2px 8px;border-radius:3px;
+      font-size:.67rem;font-weight:600;font-family:var(--font-mono)}
+    .tcap-pill.up  {background:rgba(59,130,246,.15);color:var(--azul)}
+    .tcap-pill.down{background:rgba(249,115,22,.15);color:var(--laranja)}
+    .tcap-pill.base{background:var(--border);color:var(--txt-3)}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Supply / Capacidade</div>
+      <div class="page-subtitle">Planejamento de Turnos · HE · Gargalos · Utilização 2026</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost btn-sm" onclick="resetTudo()">↺ Reset</button>
+      <button class="btn btn-primary btn-sm" onclick="salvarTudo()">💾 Salvar</button>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- KPIs -->
+    <div class="kpi-grid-4">
+      <div class="kpi-card vermelho">
+        <div class="kpi-label">Pico de Utilização</div>
+        <div class="kpi-value vermelho" id="kpi-pico">—</div>
+        <div class="kpi-unit" id="kpi-pico-unit">sem HE</div>
+      </div>
+      <div class="kpi-card amarelo">
+        <div class="kpi-label">Meses Gargalo (&gt;100%)</div>
+        <div class="kpi-value" id="kpi-gargalos">—</div>
+        <div class="kpi-unit">meses-linha acima da cap. nominal</div>
+      </div>
+      <div class="kpi-card azul">
+        <div class="kpi-label">HE Total 2026</div>
+        <div class="kpi-value sm" id="kpi-he-total">—</div>
+        <div class="kpi-unit">sábados × 3 linhas</div>
+      </div>
+      <div class="kpi-card verde">
+        <div class="kpi-label">Utilização Mar/26 (média)</div>
+        <div class="kpi-value sm verde" id="kpi-util-mar">—</div>
+        <div class="kpi-unit">L01 · L02 · L03 com HE + turnos</div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION 1: CAPACIDADE POR LINHA ════════════════════ -->
+    <div class="section-hd">
+      <div class="section-title">Capacidade por <em>Linha</em></div>
+      <div class="section-divider"></div>
+    </div>
+    <div class="cap-cards" id="cap-cards"></div>
+
+    <!-- ▸ Gráfico Planejado × Efetivo ──────────────────────── -->
+    <div class="chart-card" style="margin-bottom:20px">
+      <div class="chart-hd" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="chart-title">Planejado × Efetivo de Produção — 2026</div>
+          <div class="chart-sub">Barras = volume · Linha tracejada = % atingimento · Meta 100%</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <!-- Período -->
+          <div class="tab-group" id="pvse-period-tabs">
+            <div class="tab active" onclick="setPvsePeriod('mes',this)">Mês</div>
+            <div class="tab" onclick="setPvsePeriod('semana',this)">Semana</div>
+          </div>
+          <!-- Filtro linhas -->
+          <div class="tab-group" id="pvse-linha-tabs">
+            <div class="tab active" onclick="setPvseLinhas('fab',this)">Fábrica</div>
+            <div class="tab pvse-l" onclick="togglePvseLinha('L01',this)">L01</div>
+            <div class="tab pvse-l" onclick="togglePvseLinha('L02',this)">L02</div>
+            <div class="tab pvse-l" onclick="togglePvseLinha('L03',this)">L03</div>
+          </div>
+        </div>
+      </div>
+      <canvas id="chart-pvse" height="190"></canvas>
+    </div>
+
+    <!-- ══ SECTION 2: HE ══════════════════════════════════════ -->
+    <div class="section-hd">
+      <div class="section-title">Horas Extras <em>(Sábados)</em> por Mês</div>
+      <div class="section-divider"></div>
+      <span style="font-size:.66rem;color:var(--txt-3);font-family:var(--font-mono)">
+        Cada sábado adiciona 1 dia de capacidade por linha · máx 6/mês
+      </span>
+    </div>
+
+    <div class="controls-bar" style="margin-bottom:12px">
+      <span class="ctrl-label">HE Global</span>
+      <div class="tab-group" id="he-tabs">
+        <div class="tab active" onclick="setHEGlobal(0,this)">0 sáb</div>
+        <div class="tab" onclick="setHEGlobal(1,this)">1 sáb</div>
+        <div class="tab" onclick="setHEGlobal(2,this)">2 sáb</div>
+        <div class="tab" onclick="setHEGlobal(3,this)">3 sáb</div>
+        <div class="tab" onclick="setHEGlobal(4,this)">4 sáb</div>
+      </div>
+      <div class="ctrl-sep"></div>
+      <span class="ctrl-label">Visão</span>
+      <div class="tab-group" id="view-tabs">
+        <div class="tab active" onclick="setViewMode('ocu',this)">Ocupação %</div>
+        <div class="tab" onclick="setViewMode('cap',this)">Cap × Dem</div>
+        <div class="tab" onclick="setViewMode('delta',this)">Delta</div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:20px">
+      <div class="he-grid-wrap">
+        <div class="he-grid" id="he-grid"></div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION 3: TURNOS ══════════════════════════════════ -->
+    <div class="section-hd">
+      <div class="section-title">Planejamento de <em>Turnos</em> por Mês</div>
+      <div class="section-divider"></div>
+      <span style="font-size:.66rem;color:var(--txt-3);font-family:var(--font-mono)">
+        Permite números quebrados · ex: 1.5T = 1 turno completo + meio turno · cap proporcional
+      </span>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:12px">
+      <!-- Turno legend -->
+      <div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-size:.68rem;font-family:var(--font-mono);color:var(--txt-3)">
+          Base nominal = 1T (8,8h/dia) · 0.5T = meio turno · 2T = turno duplo
+        </div>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <span class="tcap-pill base">= base</span>
+          <span class="tcap-pill up">▲ cap extra</span>
+          <span class="tcap-pill down">▼ cap reduzida</span>
+        </div>
+      </div>
+      <div class="he-grid-wrap">
+        <div class="he-grid" id="turno-grid"></div>
+      </div>
+    </div>
+
+    <!-- Turno summary table -->
+    <div class="chart-card" style="margin-bottom:20px;padding:0;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div class="chart-title">Capacidade Estimada com Turnos</div>
+        <div class="chart-sub">Cap/dia base × fator de turno × dias úteis + HE</div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="pvse-table" id="turno-table">
+          <thead><tr>
+            <th class="left">Linha</th>
+            <th class="left">Base (1T)</th>
+            <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th>
+            <th>Mai</th><th>Jun</th><th>Jul</th><th>Ago</th>
+            <th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+          </tr></thead>
+          <tbody id="turno-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ SECTION 4: ANÁLISE ══════════════════════════════════ -->
+    <div class="section-hd">
+      <div class="section-title">Análise de <em>Capacidade</em></div>
+      <div class="section-divider"></div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-hd"><div>
+          <div class="chart-title">Utilização por Linha — 2026</div>
+          <div class="chart-sub">% cap. com turnos + HE configurados</div>
+        </div>
+        <div class="chart-legend">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--l01)"></div>L01</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--l02)"></div>L02</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--l03)"></div>L03</div>
+        </div></div>
+        <canvas id="chart-util" height="210"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hd"><div>
+          <div class="chart-title">Plano Restrito × Irrestrito</div>
+          <div class="chart-sub">Volume total · gap não atendido em vermelho</div>
+        </div></div>
+        <canvas id="chart-plano" height="210"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-hd"><div>
+          <div class="chart-title">Top Gargalos — sem HE</div>
+          <div class="chart-sub">Meses com utilização > 100%</div>
+        </div></div>
+        <div id="gargalo-list"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hd"><div>
+          <div class="chart-title">Backlog Estimado</div>
+          <div class="chart-sub">Un não atendidas com configuração atual</div>
+        </div></div>
+        <canvas id="chart-backlog" height="210"></canvas>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────
+var viewMode = 'ocu';
+
+// TURNO_STATE: turnos por linha × mês (default = 1.0)
+var TURNO_STATE = (function() {
+  try {
+    var t = JSON.parse(localStorage.getItem('odara-turnos-v2'));
+    if (t && t.L01 && t.L01.length === 13) return t;
+  } catch(e) {}
+  var arr = function() { var a=[0]; for(var i=1;i<=12;i++) a.push(1.0); return a; };
+  return { L01: arr(), L02: arr(), L03: arr() };
+})();
+
+var chartUtil=null, chartPlano=null, chartBacklog=null, chartPvse=null;
+
+// ── Cap with turnos ───────────────────────────────────────────
+// Capacity per month considering both turnos + HE
+function calcCapMensalTotal(linha, mes, he) {
+  he = he || 0;
+  var baseDia   = getCapDia(linha);            // un/dia @ 1 turno
+  var fatorTurn = TURNO_STATE[linha][mes] || 1.0; // e.g. 1.5 = 1.5× cap/dia
+  var diasUteis = DIAS_UTEIS[mes] + he;
+  return Math.round(baseDia * fatorTurn * diasUteis);
+}
+
+function calcOcupacaoTotal(linha, mes, he) {
+  var dem = calcDemandaMensal(linha, mes);
+  var cap = calcCapMensalTotal(linha, mes, he);
+  return cap > 0 ? dem / cap * 100 : 0;
+}
+
+// ── Cap cards ─────────────────────────────────────────────────
+function renderCapCards() {
+  var linhas = [
+    {id:'L01', cor:'var(--l01)', desc:'Clássicos · Mercatto'},
+    {id:'L02', cor:'var(--l02)', desc:'Mini · Zero'},
+    {id:'L03', cor:'var(--l03)', desc:'Crocantes · Dr Peanut · Chaves'},
+  ];
+  var html = '';
+  linhas.forEach(function(l) {
+    var cap = getCapDia(l.id);
+    var tur = (CAP_CONFIG[l.id] && CAP_CONFIG[l.id].turnos) ? CAP_CONFIG[l.id].turnos : 1;
+    var hh  = (CAP_CONFIG[l.id] && CAP_CONFIG[l.id].turnoH) ? CAP_CONFIG[l.id].turnoH : 8.8;
+    // Average turno for this line across 2026
+    var avgTurn = 0;
+    for (var m=1;m<=12;m++) avgTurn += (TURNO_STATE[l.id][m] || 1);
+    avgTurn = avgTurn / 12;
+
+    html += '<div class="cap-card" style="border-top-color:' + l.cor + '">' +
+      '<div class="cap-card-top">' +
+        '<div>' +
+          '<div class="cap-card-linha" style="color:' + l.cor + '">' + l.id + '</div>' +
+          '<div class="cap-card-desc">' + l.desc + '</div>' +
+        '</div>' +
+        '<span class="badge info">' + tur + 'T · ' + hh + 'h</span>' +
+      '</div>' +
+      '<div class="cap-card-data">' +
+        '<div>' +
+          '<div class="ccs-label">Cap base/dia</div>' +
+          '<div class="ccs-val">' + formatInt(cap) + '</div>' +
+          '<div class="ccs-unit">un @ 1 turno</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="ccs-label">Turno médio</div>' +
+          '<div class="ccs-val">' + avgTurn.toFixed(2) + 'T</div>' +
+          '<div class="ccs-unit">média 2026</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="ccs-label">Cap efetiva/dia</div>' +
+          '<div class="ccs-val">' + formatInt(cap * avgTurn) + '</div>' +
+          '<div class="ccs-unit">un/dia médio</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cap-card-note">Ajuste turnos abaixo · Configurações base em <a href="config.html" style="color:var(--amarelo)">Config</a></div>' +
+    '</div>';
+  });
+  document.getElementById('cap-cards').innerHTML = html;
+}
+
+// ── Chart: Planejado × Efetivo (bar + % line) ────────────────
+var pvse_period = 'mes';     // 'mes' | 'semana'
+var pvse_linhas = ['fab'];   // 'fab' or ['L01','L02','L03'] subsets
+
+function setPvsePeriod(v, el) {
+  pvse_period = v;
+  document.querySelectorAll('#pvse-period-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderChartPvse();
+}
+
+function setPvseLinhas(v, el) {
+  // Click Fábrica → deactivate all individual line tabs, set fab mode
+  pvse_linhas = ['fab'];
+  document.querySelectorAll('#pvse-linha-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderChartPvse();
+}
+
+function togglePvseLinha(linha, el) {
+  // Deactivate Fábrica tab
+  document.getElementById('pvse-linha-tabs').querySelector('.tab:first-child').classList.remove('active');
+  // Toggle this line
+  if (pvse_linhas.includes('fab')) pvse_linhas = [];
+  var idx = pvse_linhas.indexOf(linha);
+  if (idx >= 0) {
+    pvse_linhas.splice(idx, 1);
+  } else {
+    pvse_linhas.push(linha);
+  }
+  // If nothing selected, go back to fab
+  if (pvse_linhas.length === 0) {
+    pvse_linhas = ['fab'];
+    document.getElementById('pvse-linha-tabs').querySelector('.tab:first-child').classList.add('active');
+    document.querySelectorAll('.pvse-l').forEach(function(t){t.classList.remove('active');});
+  } else {
+    el.classList.toggle('active', pvse_linhas.includes(linha));
+  }
+  renderChartPvse();
+}
+
+function buildPvseData() {
+  var linhas = ['L01','L02','L03'];
+  var cores  = { L01:'#FFB81D', L02:'#3B82F6', L03:'#A78BFA' };
+  var isFab  = pvse_linhas.includes('fab');
+  var activeL = isFab ? linhas : pvse_linhas;
+
+  var labels, planByLabel, efetByLabel;
+
+  if (pvse_period === 'mes') {
+    labels       = MESES.slice(1);
+    planByLabel  = labels.map(function(_, i) {
+      var m = i+1;
+      return activeL.reduce(function(s,l){ return s + calcCapMensal(l, m, 0); }, 0);
+    });
+    efetByLabel  = labels.map(function(_, i) {
+      var m = i+1;
+      return activeL.reduce(function(s,l){
+        return s + calcCapMensalTotal(l, m, HE_STATE[l]?(HE_STATE[l][m]||0):0);
+      }, 0);
+    });
+  } else {
+    // Semanas: approximate 4 weeks per month, 48 total
+    labels = [];
+    planByLabel = []; efetByLabel = [];
+    for (var m=1;m<=12;m++) {
+      for (var w=1;w<=4;w++) {
+        labels.push(MESES[m]+' S'+w);
+        var plan = activeL.reduce(function(s,l){ return s + Math.round(calcCapMensal(l,m,0)/4); },0);
+        var efet = activeL.reduce(function(s,l){
+          return s + Math.round(calcCapMensalTotal(l,m,HE_STATE[l]?(HE_STATE[l][m]||0):0)/4);
+        },0);
+        planByLabel.push(plan);
+        efetByLabel.push(efet);
+      }
+    }
+  }
+
+  // % atingimento = efetivo / planejado * 100
+  var pctData = planByLabel.map(function(p,i){
+    return p > 0 ? Math.round(efetByLabel[i]/p*100) : 100;
+  });
+
+  // Colors per bar label (grouped by line if not fab)
+  var barColorPlan, barColorEfet;
+  if (isFab) {
+    barColorPlan = labels.map(function(){ return 'rgba(255,184,29,0.2)'; });
+    barColorEfet = labels.map(function(){ return 'rgba(255,184,29,0.7)'; });
+  } else {
+    // Cycle colors if multi-line
+    barColorPlan = labels.map(function(){ return 'rgba(100,150,220,0.2)'; });
+    barColorEfet = activeL.length === 1
+      ? labels.map(function(){ return cores[activeL[0]]+'99'; })
+      : labels.map(function(){ return 'rgba(100,150,220,0.7)'; });
+  }
+
+  return { labels:labels, planByLabel:planByLabel, efetByLabel:efetByLabel, pctData:pctData,
+           barColorPlan:barColorPlan, barColorEfet:barColorEfet };
+}
+
+function renderChartPvse() {
+  var d = buildPvseData();
+
+  if (chartPvse) { chartPvse.destroy(); }
+  chartPvse = new Chart(document.getElementById('chart-pvse'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          label: 'Planejado (cap nominal)',
+          data: d.planByLabel,
+          backgroundColor: d.barColorPlan,
+          borderColor: 'rgba(255,184,29,0.5)',
+          borderWidth: 1,
+          barPercentage: .85,
+          categoryPercentage: .6,
+          order: 2,
+        },
+        {
+          label: 'Efetivo (com HE + turnos)',
+          data: d.efetByLabel,
+          backgroundColor: d.barColorEfet,
+          borderColor: 'transparent',
+          borderWidth: 0,
+          barPercentage: .55,
+          categoryPercentage: .6,
+          order: 3,
+        },
+        {
+          label: '% Atingimento',
+          data: d.pctData,
+          type: 'line',
+          borderColor: '#22C55E',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5,3],
+          pointRadius: pvse_period === 'mes' ? 4 : 0,
+          pointBackgroundColor: '#22C55E',
+          tension: .3,
+          yAxisID: 'y2',
+          order: 1,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode:'index', intersect:false },
+      scales: {
+        x: {
+          grid: { color:'rgba(255,255,255,0.03)' },
+          ticks: { maxRotation: pvse_period==='semana'?45:0, font:{size:pvse_period==='semana'?9:11} }
+        },
+        y: {
+          position: 'left',
+          grid: { color:'rgba(255,255,255,0.04)' },
+          ticks: { callback: function(v){ return (v/1000).toFixed(0)+'K'; } },
+          title: { display:true, text:'Unidades', color:'var(--txt-3)', font:{size:10} }
+        },
+        y2: {
+          position: 'right',
+          min: 70, max: 130,
+          grid: { drawOnChartArea:false },
+          ticks: { callback: function(v){ return v+'%'; } },
+          title: { display:true, text:'% Atingimento', color:'#22C55E', font:{size:10} }
+        }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: { boxWidth:10, padding:12, font:{size:10} }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(ctx) {
+              if (ctx.dataset.yAxisID === 'y2') return ' ' + ctx.dataset.label + ': ' + ctx.raw + '%';
+              return ' ' + ctx.dataset.label + ': ' + formatInt(ctx.raw) + ' un';
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            meta100: {
+              type: 'line', yMin:100, yMax:100, yScaleID:'y2',
+              borderColor:'rgba(34,197,94,0.3)', borderWidth:1, borderDash:[4,4],
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function renderKPIs() {
+  var pico=0, picoLinha='', picoMes='', gargalos=0;
+  ['L01','L02','L03'].forEach(function(l) {
+    for (var m=1;m<=12;m++) {
+      var u = calcOcupacaoTotal(l, m, 0);
+      if (u > 100) gargalos++;
+      if (u > pico) { pico=u; picoLinha=l; picoMes=MESES[m]+'/26'; }
+    }
+  });
+  document.getElementById('kpi-pico').textContent      = pico.toFixed(0)+'%';
+  document.getElementById('kpi-pico-unit').textContent  = picoLinha + ' · ' + picoMes;
+  document.getElementById('kpi-gargalos').textContent   = gargalos;
+
+  var heTotal = 0;
+  ['L01','L02','L03'].forEach(function(l) {
+    for (var m=1;m<=12;m++) heTotal += (HE_STATE[l] ? (HE_STATE[l][m]||0) : 0);
+  });
+  document.getElementById('kpi-he-total').textContent = heTotal + ' sáb';
+
+  var utils = ['L01','L02','L03'].map(function(l) {
+    return calcOcupacaoTotal(l, 3, HE_STATE[l] ? (HE_STATE[l][3]||0) : 0);
+  });
+  document.getElementById('kpi-util-mar').textContent = ((utils[0]+utils[1]+utils[2])/3).toFixed(0)+'%';
+}
+
+// ── HE Grid ───────────────────────────────────────────────────
+function renderHEGrid() {
+  var linhas = ['L01','L02','L03'];
+  var cors   = {L01:'var(--l01)', L02:'var(--l02)', L03:'var(--l03)'};
+  var html = '';
+
+  // Header
+  html += '<div class="hg-hd left">Linha</div>';
+  for (var mi=1;mi<=12;mi++) html += '<div class="hg-hd">' + MESES[mi] + '</div>';
+
+  linhas.forEach(function(linha, li) {
+    html += '<div class="hg-label" style="color:' + cors[linha] + '">' + linha + ' — HE</div>';
+    for (var m=1;m<=12;m++) {
+      var he = HE_STATE[linha] ? (HE_STATE[linha][m]||0) : 0;
+      html += '<div class="hg-cell"><input type="number" class="he-input" ' +
+        'min="0" max="6" value="' + he + '" ' +
+        'onchange="updateHE(\'' + linha + '\',' + m + ',+this.value)" ' +
+        'title="' + linha + ' ' + MESES[m] + ': ' + he + ' sáb HE"></div>';
+    }
+
+    // Metric row
+    html += '<div class="hg-sublabel">Ocup.</div>';
+    for (var m2=1;m2<=12;m2++) {
+      var he2  = HE_STATE[linha] ? (HE_STATE[linha][m2]||0) : 0;
+      var ocu  = calcOcupacaoTotal(linha, m2, he2);
+      var cls  = ocu>105?'crit':ocu>95?'high':ocu>85?'warn':'ok';
+      if (viewMode === 'ocu') {
+        html += '<div class="hg-cell"><span class="ocu-chip ' + cls + '">' + ocu.toFixed(0) + '%</span></div>';
+      } else if (viewMode === 'cap') {
+        var cap = calcCapMensalTotal(linha, m2, he2);
+        var dem = calcDemandaMensal(linha, m2);
+        html += '<div class="hg-cell" style="flex-direction:column;gap:0;font-size:.62rem">' +
+          '<span style="color:var(--txt-2)">' + (cap/1000).toFixed(0) + 'K</span>' +
+          '<span style="color:var(--azul)">' + (dem/1000).toFixed(0) + 'K</span></div>';
+      } else {
+        var delta = calcCapMensalTotal(linha, m2, he2) - calcDemandaMensal(linha, m2);
+        var dc = delta < 0 ? 'var(--vermelho)' : 'var(--verde)';
+        html += '<div class="hg-cell" style="font-size:.65rem;color:' + dc + '">' +
+          (delta>=0?'+':'') + (delta/1000).toFixed(0) + 'K</div>';
+      }
+    }
+    if (li < 2) html += '<div class="hg-sep"></div>';
+  });
+
+  document.getElementById('he-grid').innerHTML = html;
+}
+
+// ── Turno Grid ────────────────────────────────────────────────
+function renderTurnoGrid() {
+  var linhas = ['L01','L02','L03'];
+  var cors   = {L01:'var(--l01)', L02:'var(--l02)', L03:'var(--l03)'};
+  var html = '';
+
+  // Header
+  html += '<div class="hg-hd left">Linha</div>';
+  for (var mi=1;mi<=12;mi++) html += '<div class="hg-hd">' + MESES[mi] + '</div>';
+
+  linhas.forEach(function(linha, li) {
+    var baseCap = getCapDia(linha);
+
+    html += '<div class="hg-label" style="color:' + cors[linha] + '">' + linha + ' — T</div>';
+    for (var m=1;m<=12;m++) {
+      var t = TURNO_STATE[linha][m] || 1.0;
+      html += '<div class="hg-cell"><input type="number" class="turno-input" ' +
+        'min="0.25" max="3" step="0.25" value="' + t + '" ' +
+        'onchange="updateTurno(\'' + linha + '\',' + m + ',+this.value)" ' +
+        'title="' + linha + ' ' + MESES[m] + ': ' + t + ' turnos"></div>';
+    }
+
+    // Cap efetiva por mês
+    html += '<div class="hg-sublabel">Cap/dia</div>';
+    for (var m2=1;m2<=12;m2++) {
+      var t2      = TURNO_STATE[linha][m2] || 1.0;
+      var capDia  = Math.round(baseCap * t2);
+      var diff    = t2 - 1.0;
+      var pillCls = Math.abs(diff) < 0.01 ? 'base' : diff > 0 ? 'up' : 'down';
+      html += '<div class="hg-cell"><span class="tcap-pill ' + pillCls + '">' +
+        formatInt(capDia) + '</span></div>';
+    }
+    if (li < 2) html += '<div class="hg-sep"></div>';
+  });
+
+  document.getElementById('turno-grid').innerHTML = html;
+  renderTurnoTable();
+}
+
+// ── Turno summary table ───────────────────────────────────────
+function renderTurnoTable() {
+  var linhas = ['L01','L02','L03'];
+  var cors   = {L01:'var(--l01)', L02:'var(--l02)', L03:'var(--l03)'};
+  var tbody  = document.getElementById('turno-tbody');
+  var html   = '';
+
+  linhas.forEach(function(linha) {
+    var baseCap = getCapDia(linha);
+    var cells   = '';
+    for (var m=1;m<=12;m++) {
+      var t   = TURNO_STATE[linha][m] || 1.0;
+      var he  = HE_STATE[linha] ? (HE_STATE[linha][m]||0) : 0;
+      var cap = calcCapMensalTotal(linha, m, he); // monthly cap
+      var ocu = calcOcupacaoTotal(linha, m, he);
+      var cls = ocu>105?'crit':ocu>95?'high':ocu>85?'warn':'ok';
+      cells += '<td>' +
+        '<div style="font-size:.7rem;color:var(--txt-2)">' + (cap/1000).toFixed(0) + 'K</div>' +
+        '<div style="margin-top:2px"><span class="ocu-chip ' + cls + '" style="min-width:0;padding:1px 5px">' + ocu.toFixed(0) + '%</span></div>' +
+      '</td>';
+    }
+    html += '<tr>' +
+      '<td style="font-family:var(--font-display);font-weight:700;font-size:.82rem;color:' + cors[linha] + ';text-align:left">' + linha + '</td>' +
+      '<td style="text-align:left;color:var(--txt-3);font-size:.7rem">' + formatInt(baseCap) + ' un/dia @ 1T</td>' +
+      cells +
+    '</tr>';
+  });
+
+  tbody.innerHTML = html;
+}
+
+// ── Chart: Utilização ─────────────────────────────────────────
+function renderChartUtil() {
+  var labels   = MESES.slice(1);
+  var datasets = ['L01','L02','L03'].map(function(l, i) {
+    return {
+      label: l,
+      data: Array.from({length:12}, function(_, j) {
+        var m  = j+1;
+        var he = HE_STATE[l] ? (HE_STATE[l][m]||0) : 0;
+        return calcOcupacaoTotal(l, m, he);
+      }),
+      borderColor: ['#FFB81D','#3B82F6','#A78BFA'][i],
+      backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 2, tension: .3
+    };
+  });
+  datasets.push({
+    label:'100%', data:Array(12).fill(100),
+    borderColor:'rgba(238,39,55,.5)', borderDash:[5,3],
+    borderWidth:1.5, pointRadius:0
+  });
+
+  if (chartUtil) {
+    for (var i=0;i<3;i++) chartUtil.data.datasets[i].data = datasets[i].data;
+    chartUtil.update('active');
+    return;
+  }
+  chartUtil = new Chart(document.getElementById('chart-util'), {
+    type: 'line',
+    data: { labels:labels, datasets:datasets },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.03)'} },
+        y: { min:50, max:150, grid:{color:'rgba(255,255,255,0.03)'},
+             ticks:{ callback: function(v){ return v+'%'; } } }
+      },
+      plugins: {
+        legend: { position:'top', align:'end' },
+        tooltip: { callbacks:{ label: function(ctx){ return ' '+ctx.dataset.label+': '+ctx.raw.toFixed(0)+'%'; } } }
+      }
+    }
+  });
+}
+
+// ── Chart: Plano ─────────────────────────────────────────────
+function renderChartPlano() {
+  var gap = MOCK.plano_irrestrito.map(function(v,i){ return Math.max(0,v-MOCK.plano_restrito[i]); });
+  if (chartPlano) { chartPlano.destroy(); }
+  chartPlano = new Chart(document.getElementById('chart-plano'), {
+    type: 'bar',
+    data: {
+      labels: MESES.slice(1),
+      datasets: [
+        {label:'Restrito', data:MOCK.plano_restrito, backgroundColor:'#22C55E44', borderColor:'#22C55E', borderWidth:1, stack:'s', barPercentage:.7},
+        {label:'Gap',      data:gap,                 backgroundColor:'#EE273733', borderColor:'#EE273788',borderWidth:1, stack:'s', barPercentage:.7},
+        {label:'Irrestrito', data:MOCK.plano_irrestrito, type:'line',
+          borderColor:'#FFB81D88', backgroundColor:'transparent',
+          borderWidth:1.5, borderDash:[4,3], pointRadius:0, tension:.3},
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x:{stacked:true, grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{stacked:true, ticks:{callback:function(v){return(v/1000).toFixed(0)+'K';}}}
+      },
+      plugins: {
+        legend:{position:'top',align:'end'},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){return' '+ctx.dataset.label+': '+formatInt(ctx.raw);}}}
+      }
+    }
+  });
+}
+
+// ── Gargalos ──────────────────────────────────────────────────
+function renderGargalos() {
+  var items=[];
+  ['L01','L02','L03'].forEach(function(l) {
+    for (var m=1;m<=12;m++) {
+      var u = calcOcupacaoTotal(l,m,0);
+      if (u>100) items.push({linha:l, mes:MESES[m], u:u});
+    }
+  });
+  items.sort(function(a,b){return b.u-a.u;});
+  var cors={L01:'var(--l01)',L02:'var(--l02)',L03:'var(--l03)'};
+
+  if (!items.length) {
+    document.getElementById('gargalo-list').innerHTML =
+      '<div class="empty-state"><div class="es-icon">✓</div>' +
+      '<div class="es-msg">Sem gargalos com configuração atual</div></div>';
+    return;
+  }
+  var html='';
+  items.slice(0,8).forEach(function(it) {
+    var uc  = it.u>120?'var(--vermelho)':it.u>110?'var(--amarelo)':'var(--laranja)';
+    var pct = Math.min(it.u,140)/140*100;
+    html += '<div class="bn-item">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:3px">' +
+        '<span style="font-size:.76rem;font-family:var(--font-body);color:var(--txt-1)">' + it.linha+' · '+it.mes+'/26</span>' +
+        '<span style="font-family:var(--font-mono);font-size:.72rem;color:'+uc+'">' + it.u.toFixed(0)+'%</span>' +
+      '</div>' +
+      '<div class="bn-bar"><div class="bn-fill" style="width:'+pct+'%;background:'+cors[it.linha]+'"></div></div>' +
+    '</div>';
+  });
+  document.getElementById('gargalo-list').innerHTML = html;
+}
+
+// ── Chart: Backlog ────────────────────────────────────────────
+function calcBacklog() {
+  return MESES.slice(1).map(function(_,idx) {
+    var m=idx+1, total=0;
+    ['L01','L02','L03'].forEach(function(l) {
+      var he  = HE_STATE[l]?(HE_STATE[l][m]||0):0;
+      var gap = calcDemandaMensal(l,m) - calcCapMensalTotal(l,m,he);
+      if (gap>0) total+=gap;
+    });
+    return total;
+  });
+}
+
+function renderChartBacklog() {
+  var backlog  = calcBacklog();
+  var bgColors = backlog.map(function(v){return v>0?'#EE273744':'#22C55E22';});
+  var bdColors = backlog.map(function(v){return v>0?'#EE2737':'#22C55E';});
+  if (chartBacklog) {
+    chartBacklog.data.datasets[0].data            = backlog;
+    chartBacklog.data.datasets[0].backgroundColor = bgColors;
+    chartBacklog.data.datasets[0].borderColor     = bdColors;
+    chartBacklog.update('active');
+    return;
+  }
+  chartBacklog = new Chart(document.getElementById('chart-backlog'),{
+    type:'bar',
+    data:{labels:MESES.slice(1),datasets:[{
+      label:'Backlog (un)',data:backlog,
+      backgroundColor:bgColors,borderColor:bdColors,borderWidth:1.5,barPercentage:.65
+    }]},
+    options:{
+      responsive:true,
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{callback:function(v){return(v/1000).toFixed(0)+'K';}}}
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' Backlog: '+formatInt(ctx.raw)+' un';}}}}
+    }
+  });
+}
+
+// ── Controls ──────────────────────────────────────────────────
+function setHEGlobal(v, el) {
+  ['L01','L02','L03'].forEach(function(l){
+    for (var m=1;m<=12;m++) HE_STATE[l][m]=v;
+  });
+  document.querySelectorAll('#he-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderAll();
+}
+
+function setViewMode(v, el) {
+  viewMode=v;
+  document.querySelectorAll('#view-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderHEGrid();
+}
+
+function updateHE(linha, mes, val) {
+  HE_STATE[linha][mes] = Math.max(0, Math.min(6, val||0));
+  renderAll();
+}
+
+function updateTurno(linha, mes, val) {
+  val = Math.max(0.25, Math.min(3, val||1));
+  // Round to nearest 0.25
+  val = Math.round(val * 4) / 4;
+  TURNO_STATE[linha][mes] = val;
+  renderAll();
+}
+
+async function resetTudo() {
+  if (!confirm('Resetar todo o HE e turnos 2026 para zero/padrão?')) return;
+  ['L01','L02','L03'].forEach(function(l){
+    HE_STATE[l]    = Array(13).fill(0);
+    TURNO_STATE[l] = [0]; for(var m=1;m<=12;m++) TURNO_STATE[l].push(1.0);
+  });
+  const ok = await saveAllHE();
+  renderAll();
+  if (ok) showToast('HE e turnos resetados e salvos no Supabase', 'warn');
+}
+
+async function salvarTudo() {
+  const ok = await saveAllHE();
+  if (ok) showToast('HE e turnos salvos no Supabase', 'ok');
+}
+
+// ── Full re-render ────────────────────────────────────────────
+function renderAll() {
+  renderCapCards();
+  renderKPIs();
+  renderHEGrid();
+  renderTurnoGrid();
+  renderChartUtil();
+  renderChartPvse();
+  renderGargalos();
+  renderChartBacklog();
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('supply');
+  renderCapCards();
+  renderKPIs();
+  renderHEGrid();
+  renderTurnoGrid();
+  renderChartPvse();
+  renderChartUtil();
+  renderChartPlano();
+  renderGargalos();
+  renderChartBacklog();
+});
+</script>
+</body>
+</html>
