@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Visão Geral</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .view-toggle-wrap{display:flex;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3px}
+    .vt-btn{padding:4px 10px;border-radius:3px;font-family:var(--font-mono);font-size:.68rem;cursor:pointer;color:var(--txt-3);transition:all .12s;user-select:none;border:none;background:transparent}
+    .vt-btn.active{background:var(--amarelo-dim);color:var(--amarelo)}
+    .vt-btn:hover:not(.active){color:var(--txt-1)}
+    .premissa-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:.68rem;color:var(--txt-3);font-family:var(--font-mono);line-height:1.7;margin-top:10px}
+    .premissa-box strong{color:var(--txt-2)}
+    .last-update-row{font-size:.68rem;color:var(--txt-3);font-family:var(--font-mono);text-align:right;margin-bottom:10px}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Visão Geral</div>
+      <div class="page-subtitle">Cockpit Executivo · S&OP 2026</div>
+    </div>
+    <div class="page-actions">
+      <span id="last-update-ts" class="last-update-row"></span>
+      <button class="btn btn-ghost btn-sm" onclick="location.reload()">↻</button>
+    </div>
+  </div>
+  <div class="page-body">
+
+    <div id="alert-bar" class="alert-bar hidden"></div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-grid">
+      <div class="kpi-card amarelo">
+        <div class="kpi-label">Receita YTD</div>
+        <div class="kpi-value" id="kpi-rec-ytd">—</div>
+        <div class="kpi-unit" id="kpi-rec-unit">—</div>
+        <div class="kpi-trend" id="kpi-rec-trend">—</div>
+      </div>
+      <div class="kpi-card azul">
+        <div class="kpi-label">Volume YTD</div>
+        <div class="kpi-value sm" id="kpi-vol-ytd">—</div>
+        <div class="kpi-unit">un · proj. anual: <span id="kpi-vol-proj">—</span></div>
+        <div class="kpi-trend" id="kpi-vol-trend">—</div>
+      </div>
+      <div class="kpi-card verde">
+        <div class="kpi-label">Cobertura Média</div>
+        <div class="kpi-value" id="kpi-cob">—</div>
+        <div class="kpi-unit">semanas · meta: <span id="meta-cob-display">—</span>+</div>
+      </div>
+      <div class="kpi-card vermelho">
+        <div class="kpi-label">SKUs em Risco</div>
+        <div class="kpi-value vermelho" id="kpi-risco">—</div>
+        <div class="kpi-unit" id="kpi-risco-unit">—</div>
+      </div>
+      <div class="kpi-card lilas">
+        <div class="kpi-label">FA &amp; Bias</div>
+        <div class="kpi-value" id="kpi-fa">—</div>
+        <div class="kpi-unit">FA · WMAPE: <span id="kpi-wmape">—</span> · Bias: <span id="kpi-bias">—</span></div>
+        <div class="kpi-trend up" id="kpi-fa-trend">—</div>
+      </div>
+    </div>
+
+    <!-- CHART + GAP -->
+    <div class="grid-2-1">
+      <div class="chart-card">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Receita &amp; Volume — 2026</div>
+            <div class="chart-sub">Real (sólido) · Forecast (tracejado) · meta R$ <span id="meta-rec-display">—</span>M</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="view-toggle-wrap" id="chart-view-toggle">
+              <button class="vt-btn active" onclick="setChartView('receita',this)">Receita</button>
+              <button class="vt-btn" onclick="setChartView('unidades',this)">Unidades</button>
+              <button class="vt-btn" onclick="setChartView('tons',this)">Toneladas</button>
+            </div>
+            <div class="chart-legend">
+              <div class="leg-item"><div class="leg-dot" style="background:var(--amarelo)"></div>Real</div>
+              <div class="leg-item"><div class="leg-dot" style="background:var(--amarelo);opacity:.4"></div>Forecast</div>
+              <div class="leg-item"><div class="leg-line" style="background:var(--verde)"></div>Acumulado</div>
+            </div>
+          </div>
+        </div>
+        <canvas id="chart-trend" height="190"></canvas>
+      </div>
+
+      <div class="gap-card">
+        <div class="chart-hd" style="margin-bottom:6px">
+          <div class="chart-title">Gap Executivo</div>
+        </div>
+        <div class="gap-metric"><span class="gm-label">Meta faturamento</span><span class="gm-value" id="gap-meta">—</span></div>
+        <div class="gap-metric"><span class="gm-label">Projeção atual</span><span class="gm-value" id="gap-proj" style="color:var(--verde)">—</span></div>
+        <div class="gap-metric" style="border-bottom:none"><span class="gm-label">Desvio</span><span class="gm-value" id="gap-delta">—</span></div>
+        <div class="gap-bar-row">
+          <div class="gap-bar-label"><span>Progresso anual</span><span id="gap-pct">—</span></div>
+          <div class="gap-bar-track"><div class="gap-bar-fill" id="gap-bar" style="width:0%"></div></div>
+        </div>
+        <div style="margin-top:14px;font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:6px">Principais Riscos</div>
+        <div class="risk-list" id="risk-list"></div>
+      </div>
+    </div>
+
+    <!-- HEATMAP + DECISIONS -->
+    <div class="grid-2">
+      <div class="chart-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="chart-title">Utilização por Linha</div>
+            <div class="chart-sub">% capacidade · Jan–Dez 2026 · HE configurado em Supply</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <span style="font-size:.65rem;font-family:var(--font-mono);color:var(--verde)">●&lt;85%</span>
+            <span style="font-size:.65rem;font-family:var(--font-mono);color:var(--laranja)">●85–95%</span>
+            <span style="font-size:.65rem;font-family:var(--font-mono);color:var(--amarelo)">●95–105%</span>
+            <span style="font-size:.65rem;font-family:var(--font-mono);color:var(--vermelho)">●&gt;105%</span>
+          </div>
+        </div>
+        <div class="heatmap-wrap"><table class="heatmap" id="heatmap"></table></div>
+        <canvas id="chart-util" height="100" style="margin-top:12px"></canvas>
+        <div class="premissa-box" id="premissa-box">
+          <strong>Premissas:</strong> 1 turno (8,8h/dia) · HE = sábados adicionais por linha ·
+          Cap. L01 <span id="pr-l01">—</span> un/dia · L02 <span id="pr-l02">—</span> un/dia · L03 <span id="pr-l03">—</span> un/dia ·
+          Dr Peanut alocado em L03 até Jun/26 (260K→180K) · Sem custos de changeover projetados aqui
+        </div>
+      </div>
+
+      <div class="chart-card" style="padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div><div class="chart-title">Decisões Necessárias</div><div class="chart-sub">Ações requeridas esta semana</div></div>
+          <span class="badge atencao" id="dec-count">—</span>
+        </div>
+        <div id="decision-list"></div>
+      </div>
+    </div>
+
+    <!-- COVERAGE TABLE -->
+    <div class="section-hd">
+      <div class="section-title">Cobertura de Estoque — <em>Semana Atual</em></div>
+      <div class="section-divider"></div>
+      <span style="font-size:.66rem;color:var(--txt-3);font-family:var(--font-mono)" id="cov-source-label">fonte: mock</span>
+    </div>
+    <div class="table-card" style="margin-bottom:0">
+      <table class="data-table">
+        <thead><tr>
+          <th>SKU</th><th>Descrição</th><th>Linha</th>
+          <th class="right">Estoque</th><th class="right">Pedidos</th><th class="right">Saldo</th>
+          <th class="right">Dem/Sem</th><th class="right">Cobertura</th><th class="center">Status</th>
+        </tr></thead>
+        <tbody id="cov-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+let chartTrendInstance = null;
+let chartViewMode = 'receita';
+
+// ── Timestamp ─────────────────────────────────────────────────
+function renderTimestamp() {
+  const ts = getUploadTs('estoque') || getUploadTs('faturamento');
+  const el = document.getElementById('last-update-ts');
+  if (!el) return;
+  if (ts) {
+    el.textContent = 'Dados atualizados: ' + formatTs(ts);
+  } else {
+    const now = new Date();
+    el.textContent = 'Renderizado: ' + now.toLocaleDateString('pt-BR') + ' ' +
+      now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  }
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function renderKPIs() {
+  document.getElementById('meta-cob-display').textContent = METAS.cob_min;
+  document.getElementById('meta-rec-display').textContent = METAS.receita_ano;
+
+  const recPct = MOCK.rec_ytd / (METAS.receita_ano * 1e6) * 100;
+  document.getElementById('kpi-rec-ytd').textContent     = formatBRL(MOCK.rec_ytd);
+  document.getElementById('kpi-rec-unit').textContent    = `${recPct.toFixed(0)}% da meta · proj. ${formatBRL(MOCK.rec_prev)}`;
+  const recPace = recPct / (3/12*100) * 100;
+  const recTEl  = document.getElementById('kpi-rec-trend');
+  recTEl.textContent = `${recPace>=100?'▲':'▼'} ritmo ${recPace.toFixed(0)}%`;
+  recTEl.className   = 'kpi-trend ' + (recPace>=95?'up':'down');
+
+  document.getElementById('kpi-vol-ytd').textContent  = formatInt(MOCK.vol_ytd);
+  document.getElementById('kpi-vol-proj').textContent = formatInt(MOCK.vol_prev);
+  const volPace = (MOCK.vol_ytd/(MOCK.vol_prev*3/12))*100;
+  const volTEl  = document.getElementById('kpi-vol-trend');
+  volTEl.textContent = `${volPace>=100?'▲':'▼'} ${volPace.toFixed(0)}% do ritmo`;
+  volTEl.className   = 'kpi-trend ' + (volPace>=95?'up':'down');
+
+  const cobEl = document.getElementById('kpi-cob');
+  cobEl.textContent = MOCK.cob_media.toFixed(1) + ' sem';
+  cobEl.className   = 'kpi-value '+(MOCK.cob_media<METAS.cob_min?'vermelho':MOCK.cob_media<METAS.cob_min*1.5?'amarelo':'verde');
+
+  document.getElementById('kpi-risco').textContent    = MOCK.skus_criticos + MOCK.skus_atencao;
+  document.getElementById('kpi-risco-unit').textContent = `${MOCK.skus_criticos} crítico(s) · ${MOCK.skus_atencao} atenção`;
+
+  const fa = 100 - MOCK.fa_atual;
+  const faPrev = 100 - MOCK.fa_history.at(-2).wmape;
+  document.getElementById('kpi-fa').textContent      = `${fa.toFixed(1)}%`;
+  document.getElementById('kpi-wmape').textContent   = `${MOCK.fa_atual.toFixed(1)}%`;
+  document.getElementById('kpi-bias').textContent    = `${MOCK.bias_atual>0?'+':''}${MOCK.bias_atual.toFixed(1)}%`;
+  document.getElementById('kpi-fa-trend').textContent= `▲ +${(fa-faPrev).toFixed(1)}pp vs mês ant.`;
+}
+
+// ── Alert bar ─────────────────────────────────────────────────
+function renderAlert() {
+  const bar = document.getElementById('alert-bar');
+  if (MOCK.skus_criticos > 0) {
+    bar.className = 'alert-bar critico';
+    bar.innerHTML = `🔴 <strong>${MOCK.skus_criticos} SKU(s) crítico(s)</strong> com cobertura &lt; 1 semana — ruptura imediata.
+      <a href="estoque.html" style="color:inherit;margin-left:8px;text-decoration:underline">→ Ver estoque</a>`;
+  } else if (MOCK.skus_atencao > 0) {
+    bar.className = 'alert-bar atencao';
+    bar.innerHTML = `🟡 <strong>${MOCK.skus_atencao} SKU(s)</strong> com cobertura entre 1–2 semanas.`;
+  } else { bar.classList.add('hidden'); }
+}
+
+// ── Gap ───────────────────────────────────────────────────────
+function renderGap() {
+  const metaR = METAS.receita_ano * 1e6;
+  const proj  = MOCK.rec_prev;
+  const delta = proj - metaR;
+  const pct   = Math.min(proj/metaR*100, 110);
+  document.getElementById('gap-meta').textContent  = `R$ ${METAS.receita_ano}M`;
+  document.getElementById('gap-proj').textContent  = formatBRL(proj);
+  document.getElementById('gap-proj').style.color  = delta>=0?'var(--verde)':'var(--vermelho)';
+  document.getElementById('gap-delta').textContent = `${delta>=0?'+':''}${formatBRL(delta)} (${(delta/metaR*100).toFixed(1)}%)`;
+  document.getElementById('gap-delta').style.color = delta>=0?'var(--verde)':'var(--vermelho)';
+  document.getElementById('gap-pct').textContent   = `${pct.toFixed(0)}%`;
+  const barEl = document.getElementById('gap-bar');
+  barEl.style.width      = pct+'%';
+  barEl.style.background = delta>=0?'var(--verde)':'var(--vermelho)';
+
+  document.getElementById('risk-list').innerHTML = [
+    {tipo:'critico',icon:'🔴',msg:'Dark + Zero Trad — cobertura &lt; 1 sem → risco ruptura imediata'},
+    {tipo:'atencao',icon:'🟡',msg:`L01/L02 acima de 100% em Jul/Set → necessário HE (2–3 sáb)`},
+    {tipo:'atencao',icon:'🟡',msg:'Clássico Trad e Branco: 1,6–1,7 sem → reforçar produção'},
+    {tipo:'info',   icon:'ℹ', msg:'Dr Peanut reduz 260K→180K/mês em Jul — libera ~15% L03'},
+  ].map(r=>`<div class="risk-item ${r.tipo}"><span>${r.icon}</span><span>${r.msg}</span></div>`).join('');
+}
+
+// ── Chart: trend ──────────────────────────────────────────────
+function buildTrendDatasets(mode) {
+  const labels = MOCK.mensal.map(m=>m.label);
+  const isA = MOCK.mensal.map(m=>m.is_actual);
+
+  let valFn, unit, yFmt;
+  if (mode === 'receita') {
+    valFn = m => m.is_actual ? m.rec_real : m.rec_prev;
+    yFmt  = v => formatBRL(v);
+    unit  = 'R$';
+  } else if (mode === 'unidades') {
+    valFn = m => m.is_actual ? m.vol_real : m.vol_prev;
+    yFmt  = v => v>=1e6?(v/1e6).toFixed(1)+'M':(v/1e3).toFixed(0)+'K un';
+    unit  = 'un';
+  } else { // tons (avg 50g/alfajor)
+    valFn = m => { const v = m.is_actual ? m.vol_real : m.vol_prev; return v ? v*0.05/1000 : null; };
+    yFmt  = v => v>=1000?`${(v/1000).toFixed(1)}kt`:`${v.toFixed(0)} t`;
+    unit  = 't';
+  }
+
+  const vals = MOCK.mensal.map(valFn);
+  const realBg  = isA.map(a=>a?'#FFB81D55':'#FFB81D18');
+  const realBdr = isA.map(a=>a?'#FFB81D':'#FFB81D66');
+
+  let acc=0;
+  const acumData = MOCK.mensal.map(m=>{ const v=valFn(m); if(v) acc+=v; return acc; });
+  const metaLine = mode==='receita'
+    ? MOCK.mensal.map((_,i)=>METAS.receita_ano*1e6/12*(i+1))
+    : null;
+
+  const datasets = [
+    {label:'Volume/Receita',data:vals,backgroundColor:realBg,borderColor:realBdr,borderWidth:1.5,barPercentage:.6,order:3},
+    {label:'Acumulado',data:acumData,type:'line',borderColor:'#22C55E',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3,yAxisID:'y2',order:1},
+  ];
+  if (metaLine) datasets.push({label:'Meta',data:metaLine,type:'line',borderColor:metaLineColor(),borderDash:[5,4],backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,yAxisID:'y2',order:2});
+
+  return {labels, datasets, yFmt, unit};
+}
+
+function renderChartTrend() {
+  const {labels, datasets, yFmt} = buildTrendDatasets(chartViewMode);
+  if (chartTrendInstance) { chartTrendInstance.destroy(); }
+  chartTrendInstance = new Chart(document.getElementById('chart-trend'),{
+    type:'bar',
+    data:{labels,datasets},
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      scales:{
+        x:{grid:{color:gridColor()},ticks:{font:{size:10}}},
+        y:{grid:{color:gridColor()},ticks:{callback:yFmt}},
+        y2:{grid:{drawOnChartArea:false},ticks:{callback:yFmt},position:'right'}
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${yFmt(ctx.raw)}`}}}
+    }
+  });
+}
+
+function setChartView(mode, el) {
+  chartViewMode = mode;
+  document.querySelectorAll('.vt-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderChartTrend();
+}
+
+// ── Heatmap ───────────────────────────────────────────────────
+function renderHeatmap() {
+  // Use saved HE + capacity config
+  const linhas = ['L01','L02','L03'];
+  let html = `<thead><tr><th class="linha-col"></th>${MESES.slice(1).map(l=>`<th>${l}</th>`).join('')}</tr></thead><tbody>`;
+  linhas.forEach((linha,i)=>{
+    const cor = ['var(--l01)','var(--l02)','var(--l03)'][i];
+    html += `<tr><td class="linha-label" style="color:${cor}">${linha}</td>`;
+    for(let m=1;m<=12;m++){
+      const he  = HE_STATE[linha]?.[m] || 0;
+      const ocu = calcOcupacao(linha,m,he);
+      const cls = m<=3 ? heatClass(ocu) : 'heat-future';
+      html += `<td class="${cls}" title="${MESES[m]}: ${ocu.toFixed(0)}% (HE:${he})">${ocu.toFixed(0)}%</td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('heatmap').innerHTML = html;
+
+  // Premissas
+  document.getElementById('pr-l01').textContent = formatInt(getCapDia('L01'));
+  document.getElementById('pr-l02').textContent = formatInt(getCapDia('L02'));
+  document.getElementById('pr-l03').textContent = formatInt(getCapDia('L03'));
+}
+
+function renderChartUtil() {
+  new Chart(document.getElementById('chart-util'),{
+    type:'line',
+    data:{
+      labels:MESES.slice(1),
+      datasets:[
+        {label:'L01',data:['L01','L02','L03'].map((_,i)=>i===0?MOCK.utilizacao.L01:null).find(x=>x)||MOCK.utilizacao.L01,
+          borderColor:'#FFB81D',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3},
+        {label:'L02',data:MOCK.utilizacao.L02,borderColor:'#3B82F6',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3},
+        {label:'L03',data:MOCK.utilizacao.L03,borderColor:'#A78BFA',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3},
+        {label:'100%',data:Array(12).fill(100),borderColor:'rgba(238,39,55,.45)',borderDash:[4,3],borderWidth:1,pointRadius:0},
+      ]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        x:{grid:{color:gridColorLight()},ticks:{font:{size:9}}},
+        y:{min:50,max:145,grid:{color:gridColorLight()},ticks:{callback:v=>v+'%',font:{size:9}}}
+      },
+      plugins:{legend:{position:'top',align:'end',labels:{boxWidth:7,padding:8,font:{size:9}}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}%`}}}
+    }
+  });
+}
+
+// ── Decisions ─────────────────────────────────────────────────
+function renderDecisions() {
+  const items = [
+    {tipo:'critico',icon:'🔴',title:'Clássico Dark + Zero Tradicional — ruptura',detail:'Cob. 0.6 e 0.8 sem · 27K un em pedidos pendentes',action:'→ Priorizar L01/L02 semana atual'},
+    {tipo:'atencao',icon:'🟡',title:'Avaliar HE Jul–Set (pico sazonal)',detail:'L01 125% · L02 134% · L03 116% sem HE',action:'→ Confirmar 2–3 sábados/mês em Supply'},
+    {tipo:'atencao',icon:'🟡',title:'Reforçar Clássico Trad e Branco',detail:'Cob. 1.7 e 1.6 sem · demanda sobe em Abr',action:'→ Adicionar 1 lote/semana'},
+    {tipo:'info',   icon:'ℹ', title:'Chaves L03 — início Jul/26',detail:'2 SKUs (Escuro + Claro) · 30K/mês cada · ~15% L03',action:'→ Confirmar setup e embalagem'},
+    {tipo:'info',   icon:'ℹ', title:'Dr Peanut ramp-down',detail:'260K→180K a partir de Jul/26',action:'→ Ajustar plano L03 H2'},
+  ];
+  document.getElementById('dec-count').textContent = items.length;
+  document.getElementById('decision-list').innerHTML = items.map(d=>`
+    <div class="decision-row">
+      <div class="dr-icon ${d.tipo}">${d.icon}</div>
+      <div class="dr-content">
+        <div class="dr-title">${d.title}</div>
+        <div class="dr-detail">${d.detail}</div>
+        <div class="dr-detail" style="color:var(--azul);margin-top:2px">${d.action}</div>
+      </div>
+      <div class="dr-tag"><span class="badge ${d.tipo}">${d.tipo==='critico'?'Crítico':d.tipo==='atencao'?'Atenção':'Info'}</span></div>
+    </div>`).join('');
+}
+
+// ── Coverage table ────────────────────────────────────────────
+function renderCovTable() {
+  const rows = [...MOCK.cobertura].sort((a,b)=>a.cob_sem-b.cob_sem);
+  document.getElementById('cov-tbody').innerHTML = rows.map(c=>{
+    const saldo=c.estoque_un-c.pedidos_un;
+    return `<tr>
+      <td class="bold mono">${c.sku}</td>
+      <td class="name">${c.desc}</td>
+      <td class="tag-${c.linha.toLowerCase()}">${c.linha}</td>
+      <td class="right">${formatInt(c.estoque_un)}</td>
+      <td class="right vermelho">${formatInt(c.pedidos_un)}</td>
+      <td class="right bold" style="color:${saldo<0?'var(--vermelho)':'var(--txt-1)'}">${formatInt(saldo)}</td>
+      <td class="right dim">${formatInt(c.dem_sem)}</td>
+      <td class="right bold" style="color:${coverageBg(c.cob_sem)}">${c.cob_sem.toFixed(1)} sem</td>
+      <td class="center"><span class="badge ${coverageClass(c.status)}">${
+        c.status==='critico'?'🔴 Crítico':c.status==='atencao'?'🟡 Atenção':'🟢 OK'
+      }</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('visao-geral');
+  renderTimestamp();
+  renderKPIs();
+  renderAlert();
+  renderGap();
+  renderChartTrend();
+  renderHeatmap();
+  renderChartUtil();
+  renderDecisions();
+  renderCovTable();
+});
+</script>
+</body>
+</html>
