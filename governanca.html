@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Governança</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .gov-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px}
+    .gov-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow-card)}
+    .gov-card-title{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .stage-list{display:flex;flex-direction:column;gap:4px}
+    .stage-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);border:1px solid transparent}
+    .stage-item.atual{background:var(--amarelo-dim);border-color:rgba(255,184,29,.2)}
+    .stage-item.concluido{background:var(--verde-dim);border-color:rgba(34,197,94,.15)}
+    .stage-item.pendente{background:var(--surface);border-color:var(--border)}
+    .stage-item.bloqueado{background:var(--vermelho-dim);border-color:rgba(238,39,55,.15)}
+    .stage-num{font-family:var(--font-mono);font-weight:700;font-size:.7rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .stage-item.atual .stage-num{background:var(--amarelo);color:var(--txt-inv)}
+    .stage-item.concluido .stage-num{background:var(--verde);color:#fff}
+    .stage-item.pendente .stage-num{background:var(--border-2);color:var(--txt-3)}
+    .stage-item.bloqueado .stage-num{background:var(--vermelho);color:#fff}
+    .stage-body{flex:1}
+    .stage-name{font-family:var(--font-display);font-weight:600;font-size:.8rem;color:var(--txt-1)}
+    .stage-meta{font-size:.67rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:1px}
+    .stage-date{font-family:var(--font-mono);font-size:.67rem;color:var(--txt-3);flex-shrink:0}
+    .cal-timeline{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-top:6px}
+    .cal-month{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;text-align:center}
+    .cal-month-label{font-family:var(--font-display);font-weight:700;font-size:.68rem;color:var(--txt-3);text-transform:uppercase;margin-bottom:6px}
+    .cal-event{font-size:.6rem;font-family:var(--font-mono);padding:2px 5px;border-radius:3px;margin-bottom:2px;text-align:left}
+    .cal-event.reuniao{background:var(--amarelo-dim);color:var(--amarelo)}
+    .cal-event.gate{background:var(--azul)16;color:#93C5FD}
+    .cal-event.npi{background:var(--lilas)16;color:var(--lilas);background:rgba(167,139,250,.15)}
+    .cal-event.shutdown{background:var(--border);color:var(--txt-3)}
+    .ata-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .ata-row:last-child{border-bottom:none}
+    .ata-date{font-family:var(--font-mono);font-size:.7rem;color:var(--txt-3);width:70px;flex-shrink:0;margin-top:1px}
+    .ata-body{flex:1}
+    .ata-title{font-family:var(--font-display);font-weight:700;font-size:.8rem;color:var(--txt-1)}
+    .ata-desc{font-size:.7rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px;line-height:1.6}
+    .ata-actions{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+    .ata-tag{font-size:.63rem;font-family:var(--font-mono);padding:2px 7px;border-radius:3px;background:var(--border);color:var(--txt-3)}
+    .kpi-proc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+    .kpi-proc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px}
+    .kpi-proc-label{font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:5px}
+    .kpi-proc-val{font-family:var(--font-display);font-weight:700;font-size:1.4rem}
+    .kpi-proc-sub{font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:3px}
+    .participante-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+    .participante-row:last-child{border-bottom:none}
+    .part-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;font-family:var(--font-display);flex-shrink:0}
+    .part-name{font-family:var(--font-body);font-size:.8rem;font-weight:600;color:var(--txt-1)}
+    .part-role{font-size:.67rem;color:var(--txt-3);font-family:var(--font-mono)}
+    .part-etapas{margin-left:auto;display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+    .part-etapa{font-size:.6rem;font-family:var(--font-mono);padding:1px 5px;border-radius:3px;background:var(--border);color:var(--txt-3)}
+    .part-etapa.ativo{background:var(--amarelo-dim);color:var(--amarelo)}
+    .stage-date-wrap{display:flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:.68rem;flex-shrink:0}
+    .stage-date-wrap.verde{color:var(--verde)}
+    .stage-date-wrap.amarelo{color:var(--amarelo)}
+    .date-edit{background:transparent;border:none;border-bottom:1px dashed currentColor;
+      color:inherit;font-family:var(--font-mono);font-size:.65rem;
+      outline:none;cursor:pointer;padding:1px 2px;width:90px;
+      color-scheme:dark;}
+    [data-theme="light"] .date-edit{color-scheme:light}
+    .date-edit:hover,.date-edit:focus{background:var(--surface);border-bottom-style:solid;border-radius:2px 2px 0 0}
+    .gov-note{font-size:.7rem;color:var(--txt-3);font-family:var(--font-mono);
+      padding:8px 12px;border-left:3px solid var(--border-2);margin-top:8px;line-height:1.6}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Governança S&OP</div>
+      <div class="page-subtitle">Ciclo Mensal · Calendário · Reuniões · Atas · Participantes</div>
+    </div>
+    <div class="page-actions">
+      <span style="font-family:var(--font-mono);font-size:.72rem;color:var(--txt-3)" id="ciclo-label">—</span>
+    </div>
+  </div>
+  <div class="page-body">
+
+    <!-- KPIs de Processo -->
+    <div class="kpi-proc-grid">
+      <div class="kpi-proc">
+        <div class="kpi-proc-label">Ciclo Atual</div>
+        <div class="kpi-proc-val amarelo">Mar/26</div>
+        <div class="kpi-proc-sub">Etapa 4 de 5 — Em andamento</div>
+      </div>
+      <div class="kpi-proc">
+        <div class="kpi-proc-label">Reunião S&OP</div>
+        <div class="kpi-proc-val">31/Mar</div>
+        <div class="kpi-proc-sub">Segunda · 09:00 · Sala Reuniões</div>
+      </div>
+      <div class="kpi-proc">
+        <div class="kpi-proc-label">Aderência ao Ciclo</div>
+        <div class="kpi-proc-val verde">92%</div>
+        <div class="kpi-proc-sub">últimos 6 ciclos</div>
+      </div>
+      <div class="kpi-proc">
+        <div class="kpi-proc-label">Taxa de Decisão</div>
+        <div class="kpi-proc-val amarelo">78%</div>
+        <div class="kpi-proc-sub">itens decididos na reunião</div>
+      </div>
+    </div>
+
+    <!-- Ciclo atual + Histórico -->
+    <div class="grid-2" style="margin-bottom:18px">
+
+      <!-- Etapas do ciclo -->
+      <div class="gov-card">
+        <div class="gov-card-title">⟳ Ciclo Março/26 — Status</div>
+        <div class="stage-list">
+          <div class="stage-item concluido">
+            <div class="stage-num">1</div>
+            <div class="stage-body"><div class="stage-name">Coleta de Dados</div><div class="stage-meta">Omie exportado · Estoque atualizado · Faturamento Fev/26</div></div>
+            <div class="stage-date-wrap verde">✓ <input type="date" class="date-edit" value="2026-03-10" onchange="saveEtapaDate(1,this.value)" title="Editar data"></div>
+          </div>
+          <div class="stage-item concluido">
+            <div class="stage-num">2</div>
+            <div class="stage-body"><div class="stage-name">Revisão de Demanda</div><div class="stage-meta">Comercial atualiza forecast · FA: 91,8% · Bias: +0,4%</div></div>
+            <div class="stage-date-wrap verde">✓ <input type="date" class="date-edit" value="2026-03-17" onchange="saveEtapaDate(2,this.value)" title="Editar data"></div>
+          </div>
+          <div class="stage-item concluido">
+            <div class="stage-num">3</div>
+            <div class="stage-body"><div class="stage-name">Revisão de Supply</div><div class="stage-meta">PCP valida capacidade · HE necessário Jul/Set identificado</div></div>
+            <div class="stage-date-wrap verde">✓ <input type="date" class="date-edit" value="2026-03-24" onchange="saveEtapaDate(3,this.value)" title="Editar data"></div>
+          </div>
+          <div class="stage-item atual">
+            <div class="stage-num">4</div>
+            <div class="stage-body"><div class="stage-name">Pré-S&OP (Reconciliação)</div><div class="stage-meta">Alinhamento gaps · Draft de cenários · Preparar pauta</div></div>
+            <div class="stage-date-wrap amarelo">↻ <input type="date" class="date-edit" value="2026-03-27" onchange="saveEtapaDate(4,this.value)" title="Editar data prevista"></div>
+          </div>
+          <div class="stage-item pendente">
+            <div class="stage-num">5</div>
+            <div class="stage-body"><div class="stage-name">Reunião S&OP Executiva</div><div class="stage-meta">Decisões formais · Aprovação do plano · Registro de atas</div></div>
+            <div class="stage-date-wrap"><input type="date" class="date-edit" value="2026-03-31" onchange="saveEtapaDate(5,this.value)" title="Editar data prevista"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Atas recentes -->
+      <div class="gov-card">
+        <div class="gov-card-title">📋 Últimas Reuniões</div>
+        <div class="ata-row">
+          <div class="ata-date">28/Fev/26</div>
+          <div class="ata-body">
+            <div class="ata-title">S&OP Fev/26 — Ciclo concluído</div>
+            <div class="ata-desc">3 decisões aprovadas · HE Mar confirmado · Dark + Zero em atenção desde esta reunião</div>
+            <div class="ata-actions">
+              <span class="ata-tag">✓ HE Mar: 1 sáb L01</span>
+              <span class="ata-tag">✓ Meta receita mantida R$ 36,4M</span>
+              <span class="ata-tag">⚠ Dark: cob. crítica</span>
+            </div>
+          </div>
+        </div>
+        <div class="ata-row">
+          <div class="ata-date">31/Jan/26</div>
+          <div class="ata-body">
+            <div class="ata-title">S&OP Jan/26 — Início 2026</div>
+            <div class="ata-desc">Kick-off do ciclo 2026 · Plano anual validado · Chaves confirmado Jul/26</div>
+            <div class="ata-actions">
+              <span class="ata-tag">✓ Plano 2026 aprovado</span>
+              <span class="ata-tag">✓ Chaves Jul/26 confirmado</span>
+            </div>
+          </div>
+        </div>
+        <div class="ata-row">
+          <div class="ata-date">30/Dez/25</div>
+          <div class="ata-body">
+            <div class="ata-title">S&OP Dez/25 — Encerramento</div>
+            <div class="ata-desc">Budget 2026 aprovado · Revisão de portfólio · Metas de acuracidade definidas</div>
+            <div class="ata-actions">
+              <span class="ata-tag">✓ FA meta: 88%</span>
+              <span class="ata-tag">✓ OTIF meta: 98%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendário anual -->
+    <div class="section-hd"><div class="section-title">Calendário S&OP <em>2026</em></div><div class="section-divider"></div></div>
+    <div class="gov-card" style="margin-bottom:18px">
+      <div class="cal-timeline" id="cal-timeline"></div>
+      <div class="gov-note" style="margin-bottom:8px">
+        📅 <strong>S&OP:</strong> Reunião executiva mensal (último dia útil do mês) — aprovação do plano, decisões formais e atas.<br>
+        🔄 <strong>S&OE (Sales &amp; Operations Execution):</strong> Reuniões semanais nas demais semanas — acompanhamento de execução, ajustes táticos e alertas. Aba S&OE em desenvolvimento.
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:var(--amarelo-dim);border:1px solid rgba(255,184,29,.3)"></div>Reunião S&OP</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.2)"></div>Gate/Pré-S&OP</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.2)"></div>NPI / Lançamento</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:var(--border)"></div>Shutdown</div>
+      </div>
+    </div>
+
+    <!-- Participantes -->
+    <div class="section-hd"><div class="section-title"><em>Participantes</em> por Etapa</div><div class="section-divider"></div></div>
+    <div class="gov-card">
+      <div id="participantes-list"></div>
+    </div>
+
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+// Calendar
+const CAL_EVENTS = {
+  1:[{tipo:'reuniao',txt:'S&OP 31/Jan'},{tipo:'gate',txt:'Pré 28/Jan'}],
+  2:[{tipo:'reuniao',txt:'S&OP 28/Fev'},{tipo:'gate',txt:'Pré 25/Fev'}],
+  3:[{tipo:'reuniao',txt:'S&OP 31/Mar'},{tipo:'gate',txt:'Pré 27/Mar'}],
+  4:[{tipo:'reuniao',txt:'S&OP 30/Abr'},{tipo:'gate',txt:'Pré 28/Abr'}],
+  5:[{tipo:'reuniao',txt:'S&OP 29/Mai'}],
+  6:[{tipo:'reuniao',txt:'S&OP 30/Jun'}],
+  7:[{tipo:'reuniao',txt:'S&OP 31/Jul'},{tipo:'npi',txt:'Chaves 🆕'}],
+  8:[{tipo:'reuniao',txt:'S&OP 31/Ago'}],
+  9:[{tipo:'reuniao',txt:'S&OP 30/Set'}],
+  10:[{tipo:'reuniao',txt:'S&OP 30/Out'}],
+  11:[{tipo:'reuniao',txt:'S&OP 30/Nov'},{tipo:'gate',txt:'Budget 2027'}],
+  12:[{tipo:'reuniao',txt:'S&OP 18/Dez'},{tipo:'shutdown',txt:'Shutdown 20/Dez'}],
+};
+
+function renderCalendario() {
+  const cur = new Date().getMonth()+1;
+  document.getElementById('cal-timeline').innerHTML = MESES.slice(1).map((mes,i)=>{
+    const m=i+1;
+    const evts=(CAL_EVENTS[m]||[]).map(e=>`<div class="cal-event ${e.tipo}">${e.txt}</div>`).join('');
+    const isCur=m===cur?'border-color:var(--amarelo);':'';
+    return `<div class="cal-month" style="${isCur}">
+      <div class="cal-month-label">${mes}</div>
+      ${evts||'<div style="height:18px"></div>'}
+    </div>`;
+  }).join('');
+}
+
+const PARTICIPANTES = [
+  {nome:'João Henrique',papel:'Dono / CEO',cor:'#FFB81D',etapas:['5'],texto:'Decisão Executiva'},
+  {nome:'PCP / Produção',papel:'Planejamento',cor:'#3B82F6',etapas:['1','3','4','5'],texto:'Dados, Supply, Reunião'},
+  {nome:'Comercial',papel:'Vendas',cor:'#22C55E',etapas:['2','4','5'],texto:'Demanda, Pré-S&OP, Reunião'},
+  {nome:'Compras',papel:'Supply Chain',cor:'#A78BFA',etapas:['3','4'],texto:'Supply, Reconciliação'},
+  {nome:'Financeiro',papel:'Controller',cor:'#F97316',etapas:['4','5'],texto:'Reconciliação, Reunião'},
+];
+
+function renderParticipantes() {
+  document.getElementById('participantes-list').innerHTML = PARTICIPANTES.map(p=>{
+    const initials = p.nome.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const etapas = ['1','2','3','4','5'].map(e=>{
+      const ativo=p.etapas.includes(e);
+      return `<span class="part-etapa ${ativo?'ativo':''}">${e}</span>`;
+    }).join('');
+    return `<div class="participante-row">
+      <div class="part-avatar" style="background:${p.cor}22;color:${p.cor}">${initials}</div>
+      <div>
+        <div class="part-name">${p.nome}</div>
+        <div class="part-role">${p.papel} · ${p.texto}</div>
+      </div>
+      <div class="part-etapas">${etapas}</div>
+    </div>`;
+  }).join('');
+}
+
+// saveEtapaDate is defined in app.js and uses Supabase
+
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('governanca');
+  const cur = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('ciclo-label').textContent = 'Ciclo: '+cur.charAt(0).toUpperCase()+cur.slice(1);
+  renderCalendario();
+  renderParticipantes();
+});
+</script>
+</body>
+</html>

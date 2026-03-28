@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Ações e Follow-up</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .acao-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;border-left-width:4px;transition:background .15s}
+    .acao-card:hover{background:var(--card-hover)}
+    .acao-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:10px}
+    .acao-title{font-family:var(--font-display);font-weight:700;font-size:.85rem;color:var(--txt-1)}
+    .acao-body{font-size:.72rem;color:var(--txt-2);font-family:var(--font-mono);line-height:1.6;margin-bottom:6px}
+    .acao-footer{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .acao-resp{font-size:.65rem;font-family:var(--font-mono);padding:2px 7px;border-radius:3px;background:var(--surface);color:var(--txt-2);border:1px solid var(--border)}
+    .acao-prazo{font-size:.65rem;font-family:var(--font-mono);color:var(--txt-3)}
+    .acao-prazo.vencido{color:var(--vermelho)}
+    .acao-prazo.proximo{color:var(--amarelo)}
+    .acao-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px}
+    .stat-val{font-family:var(--font-display);font-weight:700;font-size:1.5rem}
+    .stat-label{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:4px}
+    .stat-sub{font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Ações e Follow-up</div>
+      <div class="page-subtitle">Decisões Abertas · Prazos · Responsáveis · Histórico</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="addAcao()">+ Nova Ação</button>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Abertas</div><div class="stat-val amarelo" id="st-abertas">—</div><div class="stat-sub">aguardando execução</div></div>
+      <div class="stat-card"><div class="stat-label">Vencidas</div><div class="stat-val vermelho" id="st-vencidas">—</div><div class="stat-sub">prazo ultrapassado</div></div>
+      <div class="stat-card"><div class="stat-label">Concluídas (Mês)</div><div class="stat-val verde" id="st-concluidas">—</div><div class="stat-sub">março/2026</div></div>
+      <div class="stat-card"><div class="stat-label">Taxa de Resolução</div><div class="stat-val" id="st-taxa">—</div><div class="stat-sub">últimos 30 dias</div></div>
+    </div>
+
+    <!-- Filter -->
+    <div class="acao-filter">
+      <div class="tab-group" id="filter-status">
+        <div class="tab active" onclick="filterAcoes('todos',this)">Todas</div>
+        <div class="tab" onclick="filterAcoes('aberta',this)">Abertas</div>
+        <div class="tab" onclick="filterAcoes('vencida',this)">Vencidas</div>
+        <div class="tab" onclick="filterAcoes('concluida',this)">Concluídas</div>
+      </div>
+    </div>
+
+    <!-- Actions list -->
+    <div id="acoes-list"></div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+var statusFilter = 'todos';
+var ACOES = [
+  {id:1,titulo:'Priorizar L01 para Dark + Zero Trad',corpo:'Cobertura < 1 semana. Risco de ruptura imediata. Reprogramar dosagem esta semana.',
+   responsavel:'PCP',prazo:'2026-03-28',status:'aberta',prioridade:'critico',origem:'S&OP Mar/26'},
+  {id:2,titulo:'Confirmar HE Jul–Set (2–3 sáb/mês)',corpo:'L01 a 125%, L02 a 134% sem HE. Avaliar custo vs impacto e aprovar com diretoria.',
+   responsavel:'Produção',prazo:'2026-04-05',status:'aberta',prioridade:'atencao',origem:'S&OP Mar/26'},
+  {id:3,titulo:'Reforçar produção Clássico Trad e Branco',corpo:'Cobertura 1,6–1,7 sem. Demanda sobe em Abr. Adicionar 1 lote/semana.',
+   responsavel:'PCP',prazo:'2026-04-01',status:'aberta',prioridade:'atencao',origem:'S&OP Mar/26'},
+  {id:4,titulo:'Confirmar setup e embalagem Chaves',corpo:'2 SKUs (Escuro + Claro) para Jul/26. 30K/mês cada. Validar arte e embalagem.',
+   responsavel:'Comercial',prazo:'2026-05-15',status:'aberta',prioridade:'info',origem:'S&OP Mar/26'},
+  {id:5,titulo:'Ajustar plano L03 H2 (Dr Peanut ramp-down)',corpo:'Dr Peanut reduz 260K→180K/mês a partir de Jul. Libera ~15% L03 para Chaves.',
+   responsavel:'PCP',prazo:'2026-06-15',status:'aberta',prioridade:'info',origem:'S&OP Mar/26'},
+  {id:6,titulo:'Validar forecast Fev/26 com comercial',corpo:'WMAPE caiu para 9,8%. Continuar acompanhamento mensal. Meta: <12%.',
+   responsavel:'Comercial',prazo:'2026-03-15',status:'concluida',prioridade:'ok',origem:'S&OP Fev/26'},
+  {id:7,titulo:'Subir estoque atualizado no dashboard',corpo:'Exportar ESTQ ATUAL PP do Omie e fazer upload em Dados & Sync.',
+   responsavel:'PCP',prazo:'2026-03-10',status:'concluida',prioridade:'ok',origem:'S&OP Mar/26'},
+];
+
+function getStatus(a) {
+  if (a.status === 'concluida') return 'concluida';
+  var prazo = new Date(a.prazo);
+  var hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  if (prazo < hoje) return 'vencida';
+  return 'aberta';
+}
+
+function renderStats() {
+  var abertas = ACOES.filter(function(a){return getStatus(a)==='aberta';}).length;
+  var vencidas = ACOES.filter(function(a){return getStatus(a)==='vencida';}).length;
+  var concluidas = ACOES.filter(function(a){return a.status==='concluida';}).length;
+  var total = ACOES.length;
+  document.getElementById('st-abertas').textContent = abertas;
+  document.getElementById('st-vencidas').textContent = vencidas;
+  document.getElementById('st-concluidas').textContent = concluidas;
+  document.getElementById('st-taxa').textContent = total>0 ? Math.round(concluidas/total*100)+'%' : '—';
+}
+
+function renderAcoes() {
+  var filtered = ACOES.filter(function(a) {
+    if (statusFilter === 'todos') return true;
+    return getStatus(a) === statusFilter;
+  });
+  var corsP = {critico:'var(--vermelho)',atencao:'var(--amarelo)',info:'var(--azul)',ok:'var(--verde)'};
+  var badges = {critico:'🔴 Crítico',atencao:'🟡 Atenção',info:'ℹ Info',ok:'✓ OK'};
+
+  if (!filtered.length) {
+    document.getElementById('acoes-list').innerHTML = '<div class="empty-state"><div class="es-icon">✓</div><div class="es-msg">Nenhuma ação neste filtro</div></div>';
+    return;
+  }
+
+  document.getElementById('acoes-list').innerHTML = filtered.map(function(a) {
+    var st = getStatus(a);
+    var stBadge = st==='concluida'?'<span class="badge ok">✓ Concluída</span>':
+                  st==='vencida'?'<span class="badge critico">⚠ Vencida</span>':
+                  '<span class="badge info">Aberta</span>';
+    var prazoDate = new Date(a.prazo);
+    var diffDays = Math.ceil((prazoDate - new Date())/(1000*60*60*24));
+    var prazoCls = diffDays<0?'vencido':diffDays<3?'proximo':'';
+    var prazoTxt = prazoDate.toLocaleDateString('pt-BR');
+    if (diffDays < 0 && st!=='concluida') prazoTxt += ' ('+Math.abs(diffDays)+' dias atrás)';
+    else if (diffDays >= 0 && diffDays <= 3 && st!=='concluida') prazoTxt += ' (em '+diffDays+' dias)';
+
+    return '<div class="acao-card" style="border-left-color:'+(corsP[a.prioridade]||'var(--border)')+'">'+
+      '<div class="acao-hd"><div class="acao-title"'+(st==='concluida'?' style="text-decoration:line-through;opacity:.6"':'')+'>'+a.titulo+'</div>'+stBadge+'</div>'+
+      '<div class="acao-body">'+a.corpo+'</div>'+
+      '<div class="acao-footer">'+
+        '<span class="acao-resp">👤 '+a.responsavel+'</span>'+
+        '<span class="acao-prazo '+prazoCls+'">📅 '+prazoTxt+'</span>'+
+        '<span style="font-size:.63rem;color:var(--txt-3);font-family:var(--font-mono)">'+a.origem+'</span>'+
+      '</div></div>';
+  }).join('');
+}
+
+function filterAcoes(status, el) {
+  statusFilter = status;
+  document.querySelectorAll('#filter-status .tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderAcoes();
+}
+
+function addAcao() {
+  showToast('Em desenvolvimento — ações serão persistidas no Supabase na próxima sprint','warn',4000);
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('acoes');
+  renderStats();
+  renderAcoes();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Portfólio / NPI</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .npi-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px}
+    .npi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;border-left-width:4px}
+    .npi-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+    .npi-title{font-family:var(--font-display);font-weight:700;font-size:.9rem}
+    .npi-desc{font-size:.7rem;color:var(--txt-3);font-family:var(--font-mono);line-height:1.6;margin-bottom:8px}
+    .npi-meta{display:flex;gap:8px;flex-wrap:wrap}
+    .npi-tag{font-size:.63rem;font-family:var(--font-mono);padding:2px 7px;border-radius:3px;background:var(--border);color:var(--txt-3)}
+    .npi-tag.active{background:var(--verde-dim);color:var(--verde)}
+    .npi-tag.pending{background:var(--amarelo-dim);color:var(--amarelo)}
+    .abc-row{display:grid;grid-template-columns:80px 1fr 80px 80px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:.74rem}
+    .abc-row:last-child{border-bottom:none}
+    .abc-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+    .abc-fill{height:100%;border-radius:4px}
+    .abc-label{font-family:var(--font-display);font-weight:700;font-size:.78rem}
+    .slow-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:.74rem}
+    .slow-row:last-child{border-bottom:none}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Portfólio / NPI</div>
+      <div class="page-subtitle">Lançamentos · Análise ABC · Phase-out · Mix de Margem</div>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- KPIs -->
+    <div class="kpi-grid-4">
+      <div class="kpi-card amarelo">
+        <div class="kpi-label">SKUs Ativos</div>
+        <div class="kpi-value" id="kpi-skus">—</div>
+        <div class="kpi-unit">Odara + Co-pack</div>
+      </div>
+      <div class="kpi-card verde">
+        <div class="kpi-label">NPIs em Pipeline</div>
+        <div class="kpi-value verde" id="kpi-npi">2</div>
+        <div class="kpi-unit">Chaves Escuro + Claro · Jul/26</div>
+      </div>
+      <div class="kpi-card lilas">
+        <div class="kpi-label">SKUs A (80% receita)</div>
+        <div class="kpi-value sm" id="kpi-a">—</div>
+        <div class="kpi-unit">do total de SKUs ativos</div>
+      </div>
+      <div class="kpi-card vermelho">
+        <div class="kpi-label">Candidatos Phase-out</div>
+        <div class="kpi-value sm vermelho" id="kpi-phaseout">—</div>
+        <div class="kpi-unit">SKUs com baixo giro (&lt;1% receita)</div>
+      </div>
+    </div>
+
+    <!-- NPI Cards -->
+    <div class="section-hd">
+      <div class="section-title">Lançamentos <em>NPI</em> — 2026</div>
+      <div class="section-divider"></div>
+    </div>
+    <div class="npi-cards" id="npi-cards"></div>
+
+    <!-- ABC + Slow movers -->
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-hd"><div>
+          <div class="chart-title">Análise ABC por Receita</div>
+          <div class="chart-sub">Classificação Pareto · volume vs contribuição</div>
+        </div></div>
+        <canvas id="chart-abc" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hd"><div>
+          <div class="chart-title">Mix de Receita por Família</div>
+          <div class="chart-sub">Participação % no faturamento projetado 2026</div>
+        </div></div>
+        <canvas id="chart-mix" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Phase-out candidates -->
+    <div class="section-hd">
+      <div class="section-title">Candidatos a <em>Phase-out</em></div>
+      <div class="section-divider"></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:0">
+      <div id="slow-list"></div>
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+var NPIS = [
+  {nome:'Alfajor Chaves Escuro 45g',linha:'L03',inicio:'Jul/26',vol:'30.000/mês',status:'Em preparação',
+    tags:['L03','Crocante','45g','CX 72 UN'],desc:'Primeiro SKU da licença Chaves. Cobertura escura 52% cacau. Produto alvo varejo.'},
+  {nome:'Alfajor Chaves Claro 45g',linha:'L03',inicio:'Jul/26',vol:'30.000/mês',status:'Em preparação',
+    tags:['L03','Crocante','45g','CX 72 UN'],desc:'Versão branca da licença Chaves. Mesmo formato e embalagem. Produção sequencial ao Escuro.'},
+];
+
+var ABC_DATA = [
+  {sku:'PP01001',nome:'Clássico Trad',cls:'A',rec_pct:34.2,acum:34.2,cor:'#FFB81D'},
+  {sku:'PP02001',nome:'Clássico Branco',cls:'A',rec_pct:20.8,acum:55.0,cor:'#FFB81D'},
+  {sku:'PP26001',nome:'Croc. Prestígio',cls:'A',rec_pct:9.2,acum:64.2,cor:'#A78BFA'},
+  {sku:'PP27001',nome:'Croc. Galak',cls:'A',rec_pct:8.8,acum:73.0,cor:'#A78BFA'},
+  {sku:'PP05001',nome:'Clássico Dark',cls:'A',rec_pct:7.1,acum:80.1,cor:'#FFB81D'},
+  {sku:'PP29001',nome:'Zero Trad',cls:'B',rec_pct:5.8,acum:85.9,cor:'#3B82F6'},
+  {sku:'PP30001',nome:'Zero Branco',cls:'B',rec_pct:5.2,acum:91.1,cor:'#3B82F6'},
+  {sku:'PP03001',nome:'Mini Trad',cls:'B',rec_pct:3.4,acum:94.5,cor:'#22C55E'},
+  {sku:'PP18001',nome:'Croc. Avelã',cls:'C',rec_pct:2.1,acum:96.6,cor:'#A78BFA'},
+  {sku:'PP20001',nome:'Croc. Milk',cls:'C',rec_pct:1.5,acum:98.1,cor:'#A78BFA'},
+  {sku:'PP19001',nome:'Croc. Paçoca',cls:'C',rec_pct:1.1,acum:99.2,cor:'#A78BFA'},
+  {sku:'PP03008',nome:'Mini Duplo',cls:'C',rec_pct:0.8,acum:100,cor:'#22C55E'},
+];
+
+var MIX_DATA = [
+  {familia:'Clássico',pct:42,cor:'#FFB81D'},
+  {familia:'Crocante',pct:22,cor:'#A78BFA'},
+  {familia:'Dr Peanut',pct:18,cor:'#F97316'},
+  {familia:'Zero',pct:11,cor:'#3B82F6'},
+  {familia:'Mini',pct:7,cor:'#22C55E'},
+];
+
+function renderKPIs() {
+  document.getElementById('kpi-skus').textContent = ABC_DATA.length + NPIS.length;
+  document.getElementById('kpi-a').textContent = ABC_DATA.filter(function(s){return s.cls==='A';}).length;
+  document.getElementById('kpi-phaseout').textContent = ABC_DATA.filter(function(s){return s.rec_pct<1.5;}).length;
+}
+
+function renderNPIs() {
+  document.getElementById('npi-cards').innerHTML = NPIS.map(function(n) {
+    var tags = n.tags.map(function(t){return '<span class="npi-tag">'+t+'</span>';}).join('');
+    return '<div class="npi-card" style="border-left-color:var(--lilas)">' +
+      '<div class="npi-hd"><div class="npi-title" style="color:var(--lilas)">'+n.nome+'</div><span class="badge info">'+n.status+'</span></div>' +
+      '<div class="npi-desc">'+n.desc+'</div>' +
+      '<div class="npi-meta">'+
+        '<span class="npi-tag pending">'+n.inicio+'</span>'+
+        '<span class="npi-tag">'+n.linha+'</span>'+
+        '<span class="npi-tag">'+n.vol+'</span>'+
+        tags+
+      '</div></div>';
+  }).join('');
+}
+
+function renderChartABC() {
+  var labels = ABC_DATA.map(function(s){return s.nome;});
+  var pcts = ABC_DATA.map(function(s){return s.rec_pct;});
+  var acum = ABC_DATA.map(function(s){return s.acum;});
+  var cors = ABC_DATA.map(function(s){return s.cor+'66';});
+  var bords = ABC_DATA.map(function(s){return s.cor;});
+
+  new Chart(document.getElementById('chart-abc'),{
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'% Receita',data:pcts,backgroundColor:cors,borderColor:bords,borderWidth:1.5,barPercentage:.6,order:2},
+      {label:'Acumulado',data:acum,type:'line',borderColor:'#EE2737',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3,yAxisID:'y2',order:1},
+    ]},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},
+      scales:{
+        x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},
+        y:{grid:{color:gridColorLight()},ticks:{callback:function(v){return v+'%';}}},
+        y2:{position:'right',min:0,max:100,grid:{drawOnChartArea:false},ticks:{callback:function(v){return v+'%';}}}
+      },
+      plugins:{legend:{position:'top',align:'end'},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+ctx.raw.toFixed(1)+'%';}}}}
+    }
+  });
+}
+
+function renderChartMix() {
+  new Chart(document.getElementById('chart-mix'),{
+    type:'doughnut',
+    data:{
+      labels:MIX_DATA.map(function(d){return d.familia;}),
+      datasets:[{
+        data:MIX_DATA.map(function(d){return d.pct;}),
+        backgroundColor:MIX_DATA.map(function(d){return d.cor+'88';}),
+        borderColor:MIX_DATA.map(function(d){return d.cor;}),
+        borderWidth:2,
+      }]
+    },
+    options:{responsive:true,cutout:'55%',
+      plugins:{legend:{position:'bottom',labels:{padding:12,boxWidth:10}},
+        tooltip:{callbacks:{label:function(ctx){return ' '+ctx.label+': '+ctx.raw+'%';}}}
+      }
+    }
+  });
+}
+
+function renderSlowMovers() {
+  var slow = ABC_DATA.filter(function(s){return s.rec_pct<2;});
+  if (!slow.length) {
+    document.getElementById('slow-list').innerHTML = '<div class="empty-state"><div class="es-icon">✓</div><div class="es-msg">Nenhum SKU com participação crítica identificado</div></div>';
+    return;
+  }
+  document.getElementById('slow-list').innerHTML = slow.map(function(s) {
+    return '<div class="slow-row">' +
+      '<div><span style="font-weight:700;color:var(--txt-1)">'+s.sku+'</span> · '+s.nome+'</div>' +
+      '<div style="display:flex;gap:10px;align-items:center">' +
+        '<span style="color:var(--vermelho)">'+s.rec_pct.toFixed(1)+'% receita</span>' +
+        '<span class="badge atencao">Avaliar</span>' +
+      '</div></div>';
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('portfolio');
+  renderKPIs();
+  renderNPIs();
+  renderChartABC();
+  renderChartMix();
+  renderSlowMovers();
+});
+</script>
+</body>
+</html>
