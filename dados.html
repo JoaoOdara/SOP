@@ -828,9 +828,10 @@ async function saveSupa(){
 function copyEF(){navigator.clipboard.writeText(document.getElementById('ef-code').textContent).then(()=>showToast('Código copiado!','ok'));}
 
 // ── Init ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('dados');
   updateBadge();
-  document.getElementById('est-ts').textContent=formatTs(new Date().toISOString());
+  document.getElementById('est-ts').textContent=formatUploadTs('estoque');
   document.getElementById('fat-ts').textContent=formatUploadTs('faturamento');
   document.getElementById('dp-ts').textContent=formatUploadTs('drpeanut')||'mock';
   document.getElementById('ts-orc').textContent=formatUploadTs('orcamento');

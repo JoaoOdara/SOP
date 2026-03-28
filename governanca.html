@@ -269,7 +269,8 @@ function saveEtapaDate(etapa, value) {
   showToast('Data da etapa ' + etapa + ' salva: ' + value, 'ok');
 }
 
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('governanca');
   const cur = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('ciclo-label').textContent = 'Ciclo: '+cur.charAt(0).toUpperCase()+cur.slice(1);
   renderCalendario();

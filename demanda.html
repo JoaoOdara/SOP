@@ -146,7 +146,8 @@ let fatData   = null; // loaded from cache or upload
 let chartFva  = null, chartFaH = null, chartBias = null;
 
 // ── Init ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('demanda');
   document.getElementById('meta-fa-lbl').textContent    = METAS.fa_min;
   document.getElementById('meta-wmape-lbl').textContent = METAS.wmape_max;
 

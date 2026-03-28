@@ -300,7 +300,8 @@ function setSort(mode, el) {
   renderRiskTable();
 }
 
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('estoque');
   renderKPIs();
   renderCovBars();
   renderChartCovTrend();

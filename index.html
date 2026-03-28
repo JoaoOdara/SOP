@@ -167,9 +167,14 @@ let chartViewMode = 'receita';
 function renderTimestamp() {
   const ts = getUploadTs('estoque') || getUploadTs('faturamento');
   const el = document.getElementById('last-update-ts');
-  if (el) el.textContent = ts
-    ? `Dados atualizados: ${formatTs(ts)}`
-    : `Renderizado: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+  if (!el) return;
+  if (ts) {
+    el.textContent = 'Dados atualizados: ' + formatTs(ts);
+  } else {
+    const now = new Date();
+    el.textContent = 'Renderizado: ' + now.toLocaleDateString('pt-BR') + ' ' +
+      now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  }
 }
 
 // ── KPIs ─────────────────────────────────────────────────────
