@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Governança</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .gov-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow-card)}
+    .gov-card-title{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+    /* S&OE weekly blocks */
+    .soe-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px}
+    .soe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;transition:border-color .15s}
+    .soe-card.atual{border-color:var(--amarelo);background:var(--amarelo-dim)}
+    .soe-card.concluido{border-color:rgba(34,197,94,.3);background:var(--verde-dim)}
+    .soe-card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .soe-week{font-family:var(--font-display);font-weight:700;font-size:.85rem}
+    .soe-check{width:16px;height:16px;cursor:pointer;accent-color:var(--verde)}
+    .soe-date{font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-bottom:4px}
+    .soe-focus{font-size:.68rem;color:var(--txt-2);font-family:var(--font-mono);line-height:1.5}
+    .soe-focus strong{color:var(--txt-1)}
+
+    /* S&OP monthly meeting */
+    .sop-meeting{background:var(--card);border:2px solid var(--amarelo);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:18px}
+    .sop-meeting-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px}
+    .sop-meeting-title{font-family:var(--font-display);font-weight:700;font-size:1rem;color:var(--amarelo)}
+    .sop-meeting-meta{font-size:.7rem;color:var(--txt-2);font-family:var(--font-mono);line-height:1.6;margin-bottom:8px}
+    .sop-horizonte{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+    .sop-hz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;text-align:center}
+    .sop-hz-card.atual{border-color:var(--amarelo);background:var(--amarelo-dim)}
+    .sop-hz-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:3px}
+    .sop-hz-val{font-family:var(--font-display);font-weight:700;font-size:.9rem}
+
+    /* Cycle bar */
+    .close-cycle-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:12px 16px;background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius-lg);margin-bottom:18px;flex-wrap:wrap}
+    .close-cycle-bar .ccb-info{font-size:.72rem;color:var(--txt-2);font-family:var(--font-mono)}
+
+    /* Calendar */
+    .cal-timeline{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-top:6px}
+    .cal-month{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;text-align:center}
+    .cal-month-label{font-family:var(--font-display);font-weight:700;font-size:.68rem;color:var(--txt-3);text-transform:uppercase;margin-bottom:6px}
+    .cal-event{font-size:.6rem;font-family:var(--font-mono);padding:2px 5px;border-radius:3px;margin-bottom:2px;text-align:left}
+    .cal-event.reuniao{background:var(--amarelo-dim);color:var(--amarelo)}
+    .cal-event.soe{background:rgba(59,130,246,.12);color:#93C5FD}
+    .cal-event.npi{background:rgba(167,139,250,.15);color:var(--lilas)}
+    .cal-event.shutdown{background:var(--border);color:var(--txt-3)}
+    .gov-note{font-size:.7rem;color:var(--txt-3);font-family:var(--font-mono);padding:8px 12px;border-left:3px solid var(--border-2);margin-top:8px;line-height:1.6}
+
+    /* Participantes */
+    .part-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .part-row:last-child{border-bottom:none}
+    .part-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;font-family:var(--font-display);flex-shrink:0}
+    .part-name{font-family:var(--font-body);font-size:.8rem;font-weight:600;color:var(--txt-1)}
+    .part-role{font-size:.67rem;color:var(--txt-3);font-family:var(--font-mono)}
+    .part-tags{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+    .part-tag{font-size:.6rem;font-family:var(--font-mono);padding:2px 6px;border-radius:3px;background:var(--border);color:var(--txt-3)}
+    .part-tag.soe{background:rgba(59,130,246,.12);color:#93C5FD}
+    .part-tag.sop{background:var(--amarelo-dim);color:var(--amarelo)}
+
+    /* Atas */
+    .ata-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .ata-row:last-child{border-bottom:none}
+    .ata-date{font-family:var(--font-mono);font-size:.7rem;color:var(--txt-3);width:70px;flex-shrink:0;margin-top:1px}
+    .ata-title{font-family:var(--font-display);font-weight:700;font-size:.8rem;color:var(--txt-1)}
+    .ata-desc{font-size:.7rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:2px;line-height:1.6}
+    .ata-tags{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+    .ata-tag{font-size:.63rem;font-family:var(--font-mono);padding:2px 7px;border-radius:3px;background:var(--border);color:var(--txt-3)}
+
+    /* Histórico */
+    .hist-cycle{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:6px}
+    .hist-cycle-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:6px}
+    .hist-cycle-title{font-family:var(--font-display);font-weight:700;font-size:.82rem}
+    .hist-dots{display:flex;gap:3px}
+    .hist-dot{width:14px;height:14px;border-radius:50%;font-size:.55rem;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono)}
+    .hist-dot.done{background:var(--verde-dim);color:var(--verde)}
+    .hist-dot.skip{background:var(--border);color:var(--txt-3)}
+
+    .date-edit{background:transparent;border:none;border-bottom:1px dashed currentColor;
+      color:inherit;font-family:var(--font-mono);font-size:.65rem;
+      outline:none;cursor:pointer;padding:1px 2px;width:90px;color-scheme:dark}
+    [data-theme="light"] .date-edit{color-scheme:light}
+    .date-edit:hover,.date-edit:focus{background:var(--surface);border-bottom-style:solid;border-radius:2px 2px 0 0}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Governança S&OP</div>
+      <div class="page-subtitle">S&OE Semanal · Reunião S&OP Mensal · Calendário · Participantes</div>
+    </div>
+    <div class="page-actions">
+      <span style="font-family:var(--font-mono);font-size:.72rem;color:var(--txt-3)" id="ciclo-label">—</span>
+    </div>
+  </div>
+  <div class="page-body">
+
+    <!-- KPIs -->
+    <div class="kpi-grid-4">
+      <div class="kpi-proc" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px">
+        <div style="font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:5px">Ciclo Atual</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:1.4rem;color:var(--amarelo)" id="kpi-ciclo">—</div>
+        <div style="font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:3px" id="kpi-ciclo-sub">—</div>
+      </div>
+      <div class="kpi-proc" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px">
+        <div style="font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:5px">Reunião S&OP</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:1.4rem" id="kpi-reuniao">—</div>
+        <div style="font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:3px" id="kpi-reuniao-sub">—</div>
+      </div>
+      <div class="kpi-proc" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px">
+        <div style="font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:5px">Aderência ao Ciclo</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:1.4rem;color:var(--verde)" id="kpi-aderencia">—</div>
+        <div style="font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:3px">últimos 6 ciclos</div>
+      </div>
+      <div class="kpi-proc" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px">
+        <div style="font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:5px">Ciclos Fechados</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:1.4rem" id="kpi-fechados">—</div>
+        <div style="font-size:.65rem;color:var(--txt-3);font-family:var(--font-mono);margin-top:3px">desde início do S&OP</div>
+      </div>
+    </div>
+
+    <!-- Close cycle bar -->
+    <div class="close-cycle-bar" id="close-bar">
+      <div class="ccb-info" id="close-info">—</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="resetCiclo()">↺ Resetar</button>
+        <button class="btn btn-primary btn-sm" id="btn-fechar" onclick="fecharCiclo()">✓ Fechar Ciclo</button>
+      </div>
+    </div>
+
+    <!-- ════════ S&OE SEMANAL ════════ -->
+    <div class="section-hd">
+      <div class="section-title">S&OE — <em>Execução Semanal</em></div>
+      <div class="section-divider"></div>
+      <span style="font-size:.66rem;color:var(--txt-3);font-family:var(--font-mono)">Operações + Comercial · foco em atingir o plano do mês</span>
+    </div>
+    <div class="soe-grid" id="soe-grid"></div>
+    <div class="gov-note" style="margin-bottom:18px">
+      <strong>S&OE (Sales & Operations Execution):</strong> Reuniões semanais onde Operações e Comercial acompanham a execução do plano mensal. Foco em aderência, desvios, prioridades da semana e alertas de ruptura ou atraso.
+    </div>
+
+    <!-- ════════ S&OP MENSAL ════════ -->
+    <div class="section-hd">
+      <div class="section-title">S&OP — <em>Reunião Mensal</em></div>
+      <div class="section-divider"></div>
+      <span style="font-size:.66rem;color:var(--txt-3);font-family:var(--font-mono)">Gerência + Diretoria · mês corrente + 3 meses</span>
+    </div>
+    <div class="sop-meeting" id="sop-meeting">
+      <div class="sop-meeting-hd">
+        <div>
+          <div class="sop-meeting-title" id="sop-title">Reunião S&OP — —</div>
+          <div class="sop-meeting-meta" id="sop-meta">—</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="date" class="date-edit" id="sop-date" onchange="updateSopDate(this.value)" style="width:110px">
+          <input type="checkbox" style="width:16px;height:16px;cursor:pointer;accent-color:var(--verde)" id="sop-done" onchange="toggleSopDone(this.checked)">
+        </div>
+      </div>
+      <div style="font-size:.72rem;color:var(--txt-2);font-family:var(--font-mono);margin-bottom:8px">
+        <strong>Pauta:</strong> Resultado do mês corrente · Forecast Accuracy · Capacidade e gargalos · Decisões de HE, estoque e NPI · Plano para os próximos 3 meses
+      </div>
+      <div style="font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-3);font-family:var(--font-display);font-weight:700;margin-bottom:6px">Horizonte de Planejamento</div>
+      <div class="sop-horizonte" id="sop-horizonte"></div>
+    </div>
+
+    <!-- Atas + Histórico -->
+    <div class="grid-2" style="margin-bottom:18px">
+      <div class="gov-card">
+        <div class="gov-card-title">📋 Últimas Reuniões S&OP</div>
+        <div id="atas-list"></div>
+      </div>
+      <div class="gov-card">
+        <div class="gov-card-title">📂 Ciclos Fechados</div>
+        <div id="hist-list"></div>
+      </div>
+    </div>
+
+    <!-- Calendário anual -->
+    <div class="section-hd"><div class="section-title">Calendário <em>2026</em></div><div class="section-divider"></div></div>
+    <div class="gov-card" style="margin-bottom:18px">
+      <div class="cal-timeline" id="cal-timeline"></div>
+      <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:var(--amarelo-dim);border:1px solid rgba(255,184,29,.3)"></div>Reunião S&OP</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.2)"></div>S&OE semanal</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.2)"></div>NPI</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:.67rem;font-family:var(--font-mono)"><div style="width:10px;height:10px;border-radius:2px;background:var(--border)"></div>Shutdown</div>
+      </div>
+    </div>
+
+    <!-- Participantes -->
+    <div class="section-hd"><div class="section-title"><em>Participantes</em> por Fórum</div><div class="section-divider"></div></div>
+    <div class="gov-card" id="part-card"></div>
+
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// GOVERNANÇA — S&OE semanal + S&OP mensal + ciclo com fechamento
+// ══════════════════════════════════════════════════════════════
+
+var MESES_FULL = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var MESES_ABR  = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// ── S&OE: foco de cada semana ────────────────────────────────
+var SOE_FOCO = [
+  {sem:'Semana 1', foco:'<strong>Abertura:</strong> Resultado parcial mês anterior · Validar estoque de segurança · Prioridades de produção'},
+  {sem:'Semana 2', foco:'<strong>Demanda:</strong> Atualização de forecast · Pedidos em carteira · Desvios vs plano'},
+  {sem:'Semana 3', foco:'<strong>Supply:</strong> Aderência de produção · Gargalos · Necessidade de HE · Alertas de ruptura'},
+  {sem:'Semana 4', foco:'<strong>Fechamento:</strong> Projeção de faturamento · Preparação para S&OP mensal · Consolidação de dados'},
+];
+
+// ── Estado do ciclo ──────────────────────────────────────────
+var cicloState = null;
+
+function defaultCiclo(ano, mes) {
+  var lastDay = new Date(ano, mes, 0).getDate();
+  var ultimoDiaUtil = lastDay;
+  var dow = new Date(ano, mes-1, lastDay).getDay();
+  if (dow===0) ultimoDiaUtil = lastDay-2;
+  else if (dow===6) ultimoDiaUtil = lastDay-1;
+  var sopDate = ano+'-'+String(mes).padStart(2,'0')+'-'+String(ultimoDiaUtil).padStart(2,'0');
+
+  return {
+    ano: ano, mes: mes,
+    semanas: [false, false, false, false],
+    sop_date: sopDate,
+    sop_done: false,
+    fechado: false,
+  };
+}
+
+function detectMesCiclo() {
+  var now = new Date();
+  return {ano: now.getFullYear(), mes: now.getMonth()+1};
+}
+
+// ── Persistência ─────────────────────────────────────────────
+async function loadCicloState() {
+  var rows = await dbSelect('sop_config_geral', {eq:{chave:'gov_ciclo_v2'}});
+  if (rows.length && rows[0].valor) {
+    try { cicloState = JSON.parse(rows[0].valor); return; } catch(e) {}
+  }
+  var det = detectMesCiclo();
+  cicloState = defaultCiclo(det.ano, det.mes);
+}
+
+async function saveCicloState() {
+  await dbUpsert('sop_config_geral', {chave:'gov_ciclo_v2', valor:JSON.stringify(cicloState)}, 'chave');
+}
+
+async function loadHistorico() {
+  var rows = await dbSelect('sop_config_geral', {eq:{chave:'gov_historico'}});
+  if (rows.length && rows[0].valor) {
+    try { return JSON.parse(rows[0].valor); } catch(e) {}
+  }
+  return [
+    {ano:2026,mes:2,label:'Fev/26',fechado_em:'2026-02-28',semanas_ok:4,sop_ok:true,
+      decisoes:['HE Mar: 1 sáb L01','Meta receita mantida R$ 36,4M','Dark: cob. crítica']},
+    {ano:2026,mes:1,label:'Jan/26',fechado_em:'2026-01-31',semanas_ok:4,sop_ok:true,
+      decisoes:['Plano 2026 aprovado','Chaves Jul/26 confirmado']},
+    {ano:2025,mes:12,label:'Dez/25',fechado_em:'2025-12-18',semanas_ok:4,sop_ok:true,
+      decisoes:['FA meta: 88%','OTIF meta: 98%','Budget 2026 aprovado']},
+  ];
+}
+
+async function saveHistorico(hist) {
+  await dbUpsert('sop_config_geral', {chave:'gov_historico', valor:JSON.stringify(hist)}, 'chave');
+}
+
+// ── Qual semana do mês estamos? ──────────────────────────────
+function semanaAtualDoMes() {
+  var d = new Date().getDate();
+  if (d <= 7)  return 1;
+  if (d <= 14) return 2;
+  if (d <= 21) return 3;
+  return 4;
+}
+
+// ── Render S&OE ──────────────────────────────────────────────
+function renderSOE() {
+  var c = cicloState;
+  var semAtual = (c.ano === new Date().getFullYear() && c.mes === new Date().getMonth()+1) ? semanaAtualDoMes() : 0;
+
+  document.getElementById('soe-grid').innerHTML = SOE_FOCO.map(function(s, i) {
+    var done = c.semanas[i];
+    var isCurrent = (i+1 === semAtual) && !done;
+    var cls = done ? 'concluido' : isCurrent ? 'atual' : '';
+    var diasRange = [(i*7+1), Math.min((i+1)*7, new Date(c.ano, c.mes, 0).getDate())];
+
+    return '<div class="soe-card '+cls+'">' +
+      '<div class="soe-card-hd">' +
+        '<div class="soe-week" style="color:'+(done?'var(--verde)':isCurrent?'var(--amarelo)':'var(--txt-2)')+'">'+s.sem+'</div>' +
+        '<input type="checkbox" class="soe-check" '+(done?'checked':'')+' onchange="toggleSemana('+i+',this.checked)">' +
+      '</div>' +
+      '<div class="soe-date">'+diasRange[0]+'–'+diasRange[1]+'/'+MESES_ABR[c.mes]+'</div>' +
+      '<div class="soe-focus">'+s.foco+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Render S&OP mensal ───────────────────────────────────────
+function renderSOP() {
+  var c = cicloState;
+  var label = MESES_FULL[c.mes]+'/'+c.ano;
+  document.getElementById('sop-title').textContent = 'Reunião S&OP — '+label;
+  document.getElementById('sop-date').value = c.sop_date;
+  document.getElementById('sop-done').checked = c.sop_done;
+
+  var sopDateObj = new Date(c.sop_date);
+  var dias = Math.ceil((sopDateObj - new Date())/(1000*60*60*24));
+  var metaTxt = c.sop_done ? '✓ Reunião realizada' :
+    dias > 0 ? 'Em '+dias+' dia(s) · Último dia útil do mês' :
+    dias === 0 ? '🔴 HOJE' : '⚠ Há '+Math.abs(dias)+' dia(s) — reunião pendente';
+  document.getElementById('sop-meta').textContent = metaTxt;
+
+  // Horizonte: mês corrente + 3
+  var hz = [];
+  for (var i = 0; i < 4; i++) {
+    var hm = ((c.mes - 1 + i) % 12) + 1;
+    var ha = c.ano + Math.floor((c.mes - 1 + i) / 12);
+    hz.push({label: MESES_ABR[hm]+'/'+String(ha).slice(2), atual: i===0});
+  }
+  document.getElementById('sop-horizonte').innerHTML = hz.map(function(h) {
+    return '<div class="sop-hz-card '+(h.atual?'atual':'')+'"><div class="sop-hz-label">'+(h.atual?'Corrente':'M+'+(hz.indexOf(h)))+'</div><div class="sop-hz-val">'+h.label+'</div></div>';
+  }).join('');
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function renderKPIs() {
+  var c = cicloState;
+  var label = MESES_ABR[c.mes]+'/'+String(c.ano).slice(2);
+  var semDone = c.semanas.filter(Boolean).length;
+  var totalDone = semDone + (c.sop_done ? 1 : 0);
+
+  document.getElementById('kpi-ciclo').textContent = label;
+  document.getElementById('kpi-ciclo-sub').textContent = semDone+'/4 S&OE · S&OP '+(c.sop_done?'✓':'pendente');
+
+  var sopDate = new Date(c.sop_date);
+  document.getElementById('kpi-reuniao').textContent = sopDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+  var dias = Math.ceil((sopDate - new Date())/(1000*60*60*24));
+  document.getElementById('kpi-reuniao-sub').textContent = c.sop_done ? '✓ realizada' : dias > 0 ? 'em '+dias+' dias' : dias === 0 ? 'HOJE' : 'há '+Math.abs(dias)+' dias';
+
+  // Close bar
+  var canClose = semDone >= 3 && c.sop_done;
+  document.getElementById('close-info').innerHTML = canClose
+    ? '✓ S&OE ('+semDone+'/4) e S&OP concluídos — ciclo pronto para fechar'
+    : semDone+'/4 S&OE · S&OP '+(c.sop_done?'✓':'pendente')+' · '+(canClose?'':'complete o ciclo antes de fechar');
+  document.getElementById('btn-fechar').disabled = !canClose;
+  document.getElementById('btn-fechar').style.opacity = canClose ? '1' : '.4';
+}
+
+// ── Ações ────────────────────────────────────────────────────
+async function toggleSemana(idx, checked) {
+  cicloState.semanas[idx] = checked;
+  await saveCicloState();
+  logChange('Governança', 'S&OE Semana '+(idx+1)+' '+(checked?'concluída':'reaberta'));
+  renderSOE(); renderKPIs();
+}
+
+async function toggleSopDone(checked) {
+  cicloState.sop_done = checked;
+  await saveCicloState();
+  logChange('Governança', 'Reunião S&OP '+(checked?'realizada':'reaberta'));
+  renderSOP(); renderKPIs();
+}
+
+async function updateSopDate(value) {
+  cicloState.sop_date = value;
+  await saveCicloState();
+  showToast('Data da reunião atualizada','ok');
+  renderSOP(); renderKPIs();
+}
+
+async function fecharCiclo() {
+  var c = cicloState;
+  var label = MESES_ABR[c.mes]+'/'+String(c.ano).slice(2);
+  if (!confirm('Fechar o ciclo '+label+'?\n\nO ciclo será movido para o histórico e um novo será aberto para o próximo mês.')) return;
+
+  var hist = await loadHistorico();
+  hist.unshift({
+    ano:c.ano, mes:c.mes, label:label,
+    fechado_em: new Date().toISOString().split('T')[0],
+    semanas_ok: c.semanas.filter(Boolean).length,
+    sop_ok: c.sop_done,
+    decisoes: [],
+  });
+  await saveHistorico(hist);
+
+  var proxMes = c.mes === 12 ? 1 : c.mes+1;
+  var proxAno = c.mes === 12 ? c.ano+1 : c.ano;
+  cicloState = defaultCiclo(proxAno, proxMes);
+  await saveCicloState();
+
+  logChange('Governança', 'Ciclo '+label+' fechado');
+  showToast('Ciclo '+label+' fechado! Novo ciclo aberto.','ok',4000);
+  renderAll();
+  renderHistorico(hist);
+}
+
+async function resetCiclo() {
+  if (!confirm('Resetar o ciclo atual? Todas as marcações serão perdidas.')) return;
+  cicloState = defaultCiclo(cicloState.ano, cicloState.mes);
+  await saveCicloState();
+  showToast('Ciclo resetado','warn');
+  renderAll();
+}
+
+async function checkAutoAdvance() {
+  var det = detectMesCiclo();
+  if (cicloState.ano === det.ano && cicloState.mes === det.mes) return;
+  var label = MESES_ABR[cicloState.mes]+'/'+String(cicloState.ano).slice(2);
+  document.getElementById('close-info').innerHTML =
+    '⚠ Ciclo <strong>'+label+'</strong> ainda aberto — estamos em '+MESES_FULL[det.mes]+'. Feche o ciclo anterior ou resete.';
+  document.getElementById('close-info').style.color = 'var(--amarelo)';
+}
+
+// ── Histórico ────────────────────────────────────────────────
+async function renderHistorico(hist) {
+  if (!hist) hist = await loadHistorico();
+  var aderencia = hist.length > 0 ? Math.round(hist.filter(function(h){return h.semanas_ok>=3 && h.sop_ok;}).length / Math.min(hist.length,6) * 100) : 0;
+  document.getElementById('kpi-aderencia').textContent = aderencia+'%';
+  document.getElementById('kpi-fechados').textContent = hist.length;
+
+  if (!hist.length) {
+    document.getElementById('hist-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--txt-3);font-family:var(--font-mono);font-size:.75rem">Nenhum ciclo fechado</div>';
+    document.getElementById('atas-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--txt-3);font-family:var(--font-mono);font-size:.75rem">Nenhuma ata registrada</div>';
+    return;
+  }
+
+  // Histórico compacto
+  document.getElementById('hist-list').innerHTML = hist.map(function(h) {
+    var dots = '';
+    for (var i=1;i<=4;i++) dots += '<div class="hist-dot '+(i<=h.semanas_ok?'done':'skip')+'">'+i+'</div>';
+    dots += '<div class="hist-dot '+(h.sop_ok?'done':'skip')+'">S</div>';
+    var tags = (h.decisoes||[]).map(function(d){return '<span class="ata-tag">'+d+'</span>';}).join('');
+    return '<div class="hist-cycle"><div class="hist-cycle-hd"><div class="hist-cycle-title">'+h.label+'</div><div style="display:flex;gap:8px;align-items:center"><div class="hist-dots">'+dots+'</div><span style="font-size:.63rem;color:var(--txt-3);font-family:var(--font-mono)">'+formatDate(h.fechado_em)+'</span></div></div>'+(tags?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'+tags+'</div>':'')+'</div>';
+  }).join('');
+
+  // Atas
+  document.getElementById('atas-list').innerHTML = hist.slice(0,5).map(function(h) {
+    var tags = (h.decisoes||[]).map(function(d){return '<span class="ata-tag">✓ '+d+'</span>';}).join('');
+    return '<div class="ata-row"><div class="ata-date">'+formatDate(h.fechado_em)+'</div><div><div class="ata-title">S&OP '+h.label+'</div><div class="ata-desc">'+h.semanas_ok+'/4 S&OE · S&OP '+(h.sop_ok?'✓':'—')+'</div>'+(tags?'<div class="ata-tags">'+tags+'</div>':'')+'</div></div>';
+  }).join('');
+}
+
+// ── Calendário ───────────────────────────────────────────────
+var CAL_EVENTS = {
+  1:[{tipo:'reuniao',txt:'S&OP 31/Jan'},{tipo:'soe',txt:'4× S&OE'}],
+  2:[{tipo:'reuniao',txt:'S&OP 28/Fev'},{tipo:'soe',txt:'4× S&OE'}],
+  3:[{tipo:'reuniao',txt:'S&OP 31/Mar'},{tipo:'soe',txt:'4× S&OE'}],
+  4:[{tipo:'reuniao',txt:'S&OP 30/Abr'},{tipo:'soe',txt:'4× S&OE'}],
+  5:[{tipo:'reuniao',txt:'S&OP 29/Mai'},{tipo:'soe',txt:'4× S&OE'}],
+  6:[{tipo:'reuniao',txt:'S&OP 30/Jun'},{tipo:'soe',txt:'4× S&OE'}],
+  7:[{tipo:'reuniao',txt:'S&OP 31/Jul'},{tipo:'soe',txt:'4× S&OE'},{tipo:'npi',txt:'Chaves 🆕'}],
+  8:[{tipo:'reuniao',txt:'S&OP 31/Ago'},{tipo:'soe',txt:'4× S&OE'}],
+  9:[{tipo:'reuniao',txt:'S&OP 30/Set'},{tipo:'soe',txt:'4× S&OE'}],
+  10:[{tipo:'reuniao',txt:'S&OP 30/Out'},{tipo:'soe',txt:'4× S&OE'}],
+  11:[{tipo:'reuniao',txt:'S&OP 30/Nov'},{tipo:'soe',txt:'4× S&OE'}],
+  12:[{tipo:'reuniao',txt:'S&OP 18/Dez'},{tipo:'shutdown',txt:'Shutdown 20/Dez'}],
+};
+
+function renderCalendario() {
+  var cur = new Date().getMonth()+1;
+  document.getElementById('cal-timeline').innerHTML = MESES.slice(1).map(function(mes,i) {
+    var m = i+1;
+    var evts = (CAL_EVENTS[m]||[]).map(function(e){return '<div class="cal-event '+e.tipo+'">'+e.txt+'</div>';}).join('');
+    var isCur = m===cur ? 'border-color:var(--amarelo);' : '';
+    return '<div class="cal-month" style="'+isCur+'"><div class="cal-month-label">'+mes+'</div>'+(evts||'<div style="height:18px"></div>')+'</div>';
+  }).join('');
+}
+
+// ── Participantes por fórum ──────────────────────────────────
+var PARTICIPANTES = [
+  {area:'Diretoria',       papel:'Decisão estratégica e aprovação do plano',              cor:'#FFB81D', forums:['sop']},
+  {area:'Gerência Comercial', papel:'Forecast de vendas, pipeline, desvios de demanda',   cor:'#22C55E', forums:['soe','sop']},
+  {area:'PCP / Produção',  papel:'Planejamento de produção, capacidade, programação',     cor:'#3B82F6', forums:['soe','sop']},
+  {area:'Compras / Supply', papel:'Lead times de insumos, disponibilidade de matéria-prima', cor:'#A78BFA', forums:['soe','sop']},
+  {area:'Financeiro',      papel:'P&L, custo de HE, margem, working capital',             cor:'#F97316', forums:['sop']},
+  {area:'Expedição / Logística', papel:'Capacidade de expedição, OTIF, nível de serviço', cor:'#EE2737', forums:['soe']},
+];
+
+function renderParticipantes() {
+  document.getElementById('part-card').innerHTML = PARTICIPANTES.map(function(p) {
+    var initials = p.area.split(' ').map(function(w){return w[0];}).filter(function(c){return c===c.toUpperCase();}).join('').slice(0,2);
+    var tags = p.forums.map(function(f){
+      return '<span class="part-tag '+f+'">'+(f==='soe'?'S&OE semanal':'S&OP mensal')+'</span>';
+    }).join('');
+    return '<div class="part-row"><div class="part-avatar" style="background:'+p.cor+'22;color:'+p.cor+'">'+initials+'</div><div><div class="part-name">'+p.area+'</div><div class="part-role">'+p.papel+'</div></div><div class="part-tags">'+tags+'</div></div>';
+  }).join('');
+}
+
+// ── Render all ───────────────────────────────────────────────
+function renderAll() { renderSOE(); renderSOP(); renderKPIs(); }
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('governanca');
+  await loadCicloState();
+  renderAll();
+  await checkAutoAdvance();
+  await renderHistorico();
+  renderCalendario();
+  renderParticipantes();
+  document.getElementById('ciclo-label').textContent = 'Ciclo: '+MESES_FULL[cicloState.mes]+'/'+cicloState.ano;
+});
+</script>
+</body>
+</html>
