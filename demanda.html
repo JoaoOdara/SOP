@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Odara S&OP — Demanda / Assertividade Comercial</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .source-banner{font-size:.68rem;font-family:var(--font-mono);padding:6px 12px;border-radius:var(--radius);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .source-banner.mock{background:var(--amarelo-dim);color:var(--amarelo);border:1px solid rgba(255,184,29,.2)}
+    .source-banner.real{background:var(--verde-dim);color:var(--verde);border:1px solid rgba(34,197,94,.2)}
+    .source-banner.partial{background:rgba(59,130,246,.1);color:var(--azul);border:1px solid rgba(59,130,246,.2)}
+    .view-tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3px}
+    .view-tab{padding:5px 12px;border-radius:4px;font-family:var(--font-display);font-weight:700;font-size:.75rem;cursor:pointer;color:var(--txt-3);transition:all .12s;user-select:none}
+    .view-tab.active{background:var(--amarelo-dim);color:var(--amarelo)}
+    .view-tab:hover:not(.active){color:var(--txt-1)}
+    .kpi-info{display:none;font-size:.65rem;color:var(--txt-2);font-family:var(--font-mono);
+      line-height:1.6;padding:6px 8px;margin:4px 0;background:var(--surface);
+      border:1px solid var(--border);border-radius:var(--radius);animation:fadeIn .15s}
+    .kpi-info.open{display:block}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  </style>
+</head>
+<body>
+<div id="sidebar"></div>
+<main id="main">
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Demanda / Assertividade Comercial</div>
+      <div class="page-subtitle">Plano Comercial × Faturamento Real · Acuracidade · 2026</div>
+    </div>
+  </div>
+  <div class="page-body">
+
+    <div id="source-banner" class="source-banner mock">—</div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid-4">
+      <div class="kpi-card verde">
+        <div class="kpi-label" style="cursor:help" onclick="toggleInfo('fa')">Forecast Accuracy <span style="font-weight:400;opacity:.7">(YTD)</span> <span style="opacity:.4;font-size:.7rem">ⓘ</span></div>
+        <div class="kpi-info" id="info-fa">FA = 100% − WMAPE. Mede o quão próximo o realizado ficou do plano. Quanto maior, melhor a acuracidade da projeção comercial.</div>
+        <div class="kpi-value verde" id="kpi-fa">—</div>
+        <div class="kpi-unit">meta: &gt; <span id="meta-fa-lbl">—</span>% · <span id="kpi-periodo-fa">—</span></div>
+        <div class="kpi-trend up" id="kpi-fa-trend">—</div>
+      </div>
+      <div class="kpi-card azul">
+        <div class="kpi-label" style="cursor:help" onclick="toggleInfo('wmape')">WMAPE <span style="font-weight:400;opacity:.7">(YTD)</span> <span style="opacity:.4;font-size:.7rem">ⓘ</span></div>
+        <div class="kpi-info" id="info-wmape">WMAPE = Σ|Real − Plano| ÷ Σ Plano × 100. Erro absoluto médio ponderado pelo volume. Não é afetado pela direção do desvio (sobre ou sub).</div>
+        <div class="kpi-value sm" id="kpi-wmape">—</div>
+        <div class="kpi-unit">erro ponderado · meta: &lt;<span id="meta-wmape-lbl">—</span>%</div>
+      </div>
+      <div class="kpi-card amarelo">
+        <div class="kpi-label" style="cursor:help" onclick="toggleInfo('bias')">Bias <span style="font-weight:400;opacity:.7">(YTD)</span> <span style="opacity:.4;font-size:.7rem">ⓘ</span></div>
+        <div class="kpi-info" id="info-bias">Bias = (Real − Plano) ÷ Plano × 100. Mede a direção do erro. Positivo = vendeu mais que o plano (sobre-estimativa do plano). Negativo = vendeu menos.</div>
+        <div class="kpi-value sm" id="kpi-bias">—</div>
+        <div class="kpi-unit">+sobre / −sub estimado</div>
+      </div>
+      <div class="kpi-card laranja">
+        <div class="kpi-label" style="cursor:help" onclick="toggleInfo('gap')">Volume YTD vs Plano <span style="opacity:.4;font-size:.7rem">ⓘ</span></div>
+        <div class="kpi-info" id="info-gap">Diferença absoluta entre o volume realizado (faturamento Omie) e o volume planejado (projeção ajustada) no período YTD. Positivo = acima do plano.</div>
+        <div class="kpi-value sm" id="kpi-gap">—</div>
+        <div class="kpi-unit" id="kpi-gap-unit">—</div>
+      </div>
+    </div>
+
+    <!-- Chart: Plan x Actual (compact) -->
+    <div class="chart-card" style="margin-bottom:12px">
+      <div class="chart-hd" style="flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="chart-title">Plano Comercial × Faturamento Real — 2026</div>
+          <div class="chart-sub" id="fva-sub">—</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="view-tabs" id="unit-tabs">
+            <div class="view-tab active" onclick="setUnit('un',this)">Unidades</div>
+            <div class="view-tab" onclick="setUnit('cx',this)">Caixas</div>
+            <div class="view-tab" onclick="setUnit('kg',this)">Kg</div>
+            <div class="view-tab" onclick="setUnit('rs',this)">R$</div>
+          </div>
+          <div class="chart-legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#22C55E"></div>Real</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#FFB81D55;border:1px solid #FFB81D80"></div>Plano</div>
+          </div>
+        </div>
+      </div>
+      <canvas id="chart-fva" height="140"></canvas>
+    </div>
+
+    <!-- Charts row: FA + Bias (compact) -->
+    <div class="grid-2" style="margin-bottom:4px">
+      <div class="chart-card" style="padding:12px 14px">
+        <div class="chart-hd" style="margin-bottom:6px"><div>
+          <div class="chart-title" style="font-size:.78rem">Evolução da Acuracidade</div>
+          <div class="chart-sub">WMAPE + FA — rolling 6 meses</div>
+        </div></div>
+        <canvas id="chart-fa-hist" height="130"></canvas>
+      </div>
+      <div class="chart-card" style="padding:12px 14px">
+        <div class="chart-hd" style="margin-bottom:6px"><div>
+          <div class="chart-title" style="font-size:.78rem" id="bias-title">Bias por Família</div>
+          <div class="chart-sub">% desvio · apenas PP</div>
+        </div></div>
+        <canvas id="chart-bias" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- View tabs + table -->
+    <div class="section-hd" style="margin-top:4px">
+      <div class="section-title" id="table-section-title">Desvios por <em>Família</em></div>
+      <div class="section-divider"></div>
+      <div class="view-tabs" id="view-main">
+        <div class="view-tab active" onclick="setMainView('familia',this)">Por Família</div>
+        <div class="view-tab" onclick="setMainView('sku',this)">Por SKU</div>
+        <div class="view-tab" onclick="setMainView('canal',this)">Por Canal</div>
+      </div>
+    </div>
+    <div class="table-card" style="margin-bottom:0">
+      <table class="data-table">
+        <thead id="dev-thead"><tr>
+          <th id="th-agrup">Família</th>
+          <th class="right">Vol. Plano</th>
+          <th class="right">Vol. Real (Fat.)</th>
+          <th class="right">Desvio (un)</th>
+          <th class="right">Desvio (%)</th>
+          <th class="right">WMAPE</th>
+          <th class="right">Bias</th>
+          <th class="center">Status</th>
+        </tr></thead>
+        <tbody id="dev-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script>
+var mainView='familia', chartFva=null, chartFaH=null, chartBias=null;
+var chartUnit='un'; // un, cx, kg, rs
+
+function toggleInfo(id) {
+  var el = document.getElementById('info-'+id);
+  if (!el) return;
+  var isOpen = el.classList.contains('open');
+  document.querySelectorAll('.kpi-info').forEach(function(e){e.classList.remove('open');});
+  if (!isOpen) el.classList.add('open');
+}
+
+function setUnit(u, el) {
+  chartUnit = u;
+  document.querySelectorAll('#unit-tabs .view-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  renderChartFvA();
+}
+
+function convertUnit(unidades, mode) {
+  if (mode === 'un') return unidades;
+  if (mode === 'cx') return Math.round(unidades / 72);
+  if (mode === 'kg') return Math.round(unidades * 0.05); // ~50g avg
+  return null; // rs handled separately
+}
+
+function unitLabel(mode) {
+  if (mode === 'cx') return 'cx';
+  if (mode === 'kg') return 'kg';
+  if (mode === 'rs') return 'R$';
+  return 'un';
+}
+
+function unitFmt(v, mode) {
+  if (mode === 'rs') return formatBRL(v);
+  if (v >= 1e6) return (v/1e6).toFixed(1)+'M';
+  if (v >= 1e3) return (v/1e3).toFixed(0)+'K';
+  return formatInt(v);
+}
+var demandData=null; // {mensal, byFamilia, bySku, hasPlan, hasFat}
+
+// ── PP filter ────────────────────────────────────────────────
+function isPP(fam) {
+  if (!fam) return false;
+  var f = fam.trim().toUpperCase();
+  return f.startsWith('PP') || ['CLASSICO','CLÁSSICO','MINI','CROCANTE','DR PEANUT','ZERO','ALFAJOR'].some(function(k){return f.indexOf(k)>=0;});
+}
+function normFam(fam) {
+  var f = (fam||'').toUpperCase().replace(/PP\s*[-–]\s*/,'').trim();
+  if (f.indexOf('CLASSIC')>=0||f.indexOf('CLÁSSIC')>=0) return 'CLASSICO';
+  if (f.indexOf('MINI')>=0) return 'MINI';
+  if (f.indexOf('CROCANTE')>=0) return 'CROCANTE';
+  if (f.indexOf('DR PEANUT')>=0||f.indexOf('DRPEANUT')>=0) return 'DR PEANUT';
+  if (f.indexOf('ZERO')>=0) return 'ZERO';
+  if (f.indexOf('DUPLO')>=0) return 'MINI';
+  return f;
+}
+function planSkuToFatSku(cod) {
+  // Plan uses PP01000, faturamento uses PP01001 etc. Map by removing trailing zeros
+  // Actually they may differ — we match by first 5 chars
+  return cod;
+}
+
+// ── Load data ────────────────────────────────────────────────
+async function loadDemandData() {
+  var fat = FAT_CACHE;
+  if (!fat && isDbReady()) fat = await loadFatFromSupabase();
+  
+  var plan = PLAN_CACHE;
+  if (!plan && isDbReady()) plan = await loadPlanoFromSupabase();
+
+  var hasFat = fat && fat.skus && Object.keys(fat.skus).length > 0;
+  var hasPlan = plan && plan.skus && Object.keys(plan.skus).length > 0;
+
+  console.info('[Demanda] hasFat:', hasFat, 'hasPlan:', hasPlan);
+
+  if (hasPlan || hasFat) {
+    demandData = buildFromReal(plan, fat);
+  } else {
+    demandData = buildFromMock();
+  }
+}
+
+function buildFromReal(plan, fat) {
+  var hasPlan = plan && plan.skus && Object.keys(plan.skus).length > 0;
+  var hasFat = fat && fat.skus && Object.keys(fat.skus).length > 0;
+  var MESES_NUM = {'Janeiro':1,'Fevereiro':2,'Março':3,'Marco':3,'Abril':4,'Maio':5,'Junho':6,
+                   'Julho':7,'Agosto':8,'Setembro':9,'Outubro':10,'Novembro':11,'Dezembro':12};
+  var MESES_FULL_L = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var FAM_LABELS = {CLASSICO:'Clássico',MINI:'Mini Alfajor',CROCANTE:'Crocante','DR PEANUT':'Dr Peanut',ZERO:'Zero',PEANUT:'Dr Peanut'};
+
+  // ── Build monthly from PLAN (REAL/AJUS = plan adjusted) ────
+  var mensal = [];
+  var byFamilia = {};
+  var bySku = {};
+
+  // From plan: product names as keys, qtd_ajus as planned volume
+  if (hasPlan) {
+    Object.entries(plan.skus).forEach(function(entry) {
+      var nome = entry[0], s = entry[1];
+      var nf = normFam(nome);
+      if (!byFamilia[nf]) byFamilia[nf] = {vol_prev:0, vol_real_plan:0, vol_real_fat:0, rec_prev:0, rec_real:0, label:FAM_LABELS[nf]||nf};
+
+      var skuPrev = 0, skuRecPrev = 0;
+      Object.entries(s.meses).forEach(function(me) {
+        var mes = parseInt(me[0]), v = me[1];
+        var qtd = v.qtd_ajus || 0;  // QTD AJUS = planned/adjusted units
+        byFamilia[nf].vol_prev += qtd;
+        byFamilia[nf].vol_real_plan += qtd;
+        byFamilia[nf].rec_prev += v.real_vlr || v.prev_vlr || 0;
+        skuPrev += qtd;
+        skuRecPrev += v.real_vlr || v.prev_vlr || 0;
+      });
+
+      bySku[nome] = {codigo:nome, descricao:nome, familia:nf,
+        vol_prev:skuPrev, vol_real_plan:skuPrev, vol_real_fat:0, rec_prev:skuRecPrev, rec_real:0};
+    });
+  }
+
+  // From faturamento: get actual sales (this overrides plan's REAL/AJUS for months with data)
+  if (hasFat) {
+    Object.values(fat.skus).forEach(function(s) {
+      if (!isPP(s.familia)) return;
+      var nf = normFam(s.familia);
+      if (!byFamilia[nf]) byFamilia[nf] = {vol_prev:0, vol_real_plan:0, vol_real_fat:0, rec_prev:0, rec_real:0, label:FAM_LABELS[nf]||nf};
+
+      var skuFatVol = 0, skuFatRec = 0;
+      Object.entries(s.meses).forEach(function(entry) {
+        var mesNome = entry[0], v = entry[1];
+        if (!MESES_NUM[mesNome]) return;
+        var un = Math.round((v.qtd_cx||0) * 72);
+        byFamilia[nf].vol_real_fat += un;
+        byFamilia[nf].rec_real += v.receita || 0;
+        skuFatVol += un;
+        skuFatRec += v.receita || 0;
+      });
+
+      // Merge into bySku — match by product description overlap
+      var matched = false;
+      var fatDesc = (s.descricao||'').toUpperCase().substring(0,25);
+      Object.keys(bySku).forEach(function(planKey) {
+        var planDesc = planKey.toUpperCase().substring(0,25);
+        if (fatDesc && planDesc && (fatDesc.indexOf(planDesc.substring(0,15))>=0 || planDesc.indexOf(fatDesc.substring(0,15))>=0)) {
+          bySku[planKey].vol_real_fat += skuFatVol;
+          bySku[planKey].rec_real += skuFatRec;
+          matched = true;
+        }
+      });
+      if (!matched) {
+        bySku[s.codigo] = {codigo:s.codigo, descricao:s.descricao, familia:nf,
+          vol_prev:0, vol_real_plan:0, vol_real_fat:skuFatVol, rec_prev:0, rec_real:skuFatRec};
+      }
+    });
+  }
+
+  // Build monthly totals
+  for (var m = 1; m <= 12; m++) {
+    var prevTotal = 0, realPlanTotal = 0, realFatTotal = 0, recPrev = 0, recReal = 0;
+    var hasFatMonth = false;
+
+    if (hasPlan) {
+      Object.values(plan.skus).forEach(function(s) {
+        if (s.meses[m]) {
+          var qtd = s.meses[m].qtd_ajus || 0;
+          prevTotal += qtd;
+          realPlanTotal += qtd;
+          recPrev += s.meses[m].real_vlr || s.meses[m].prev_vlr || 0;
+        }
+      });
+    }
+
+    if (hasFat) {
+      var mesNome = MESES_FULL_L[m];
+      Object.values(fat.skus).forEach(function(s) {
+        if (!isPP(s.familia)) return;
+        if (s.meses[mesNome] && (s.meses[mesNome].qtd_cx||0) > 0) {
+          hasFatMonth = true;
+          realFatTotal += Math.round((s.meses[mesNome].qtd_cx||0) * 72);
+          recReal += s.meses[mesNome].receita || 0;
+        }
+      });
+    }
+
+    // Plan = REAL/AJUS from plan (the adjusted commercial projection)
+    // Real = faturamento efetivo (from Omie) when available, otherwise REAL/AJUS from plan
+    mensal.push({
+      mes: m, label: MESES[m],
+      vol_prev: realPlanTotal || prevTotal,  // REAL/AJUS = adjusted plan
+      vol_real: hasFatMonth ? realFatTotal : null,
+      rec_prev: recPrev,
+      rec_real: hasFatMonth ? recReal : null,
+      is_actual: hasFatMonth,
+    });
+  }
+
+  return {mensal:mensal, byFamilia:byFamilia, bySku:bySku, hasPlan:hasPlan, hasFat:hasFat};
+}
+
+function buildFromMock() {
+  var byFamilia = {};
+  MOCK.bias_familia.forEach(function(b) { byFamilia[normFam(b.familia)]={vol_prev:b.vol_prev,vol_real_plan:0,vol_real_fat:b.vol_real,rec_prev:0,rec_real:0,label:b.familia}; });
+  var bySku = {};
+  MOCK.cobertura.forEach(function(c) { bySku[c.sku]={codigo:c.sku,descricao:c.desc,familia:normFam(c.familia),vol_prev:c.dem_sem*13,vol_real_plan:0,vol_real_fat:c.dem_sem*13,rec_prev:0,rec_real:0}; });
+  return {mensal:MOCK.mensal.slice(), byFamilia:byFamilia, bySku:bySku, hasPlan:false, hasFat:false};
+}
+
+// ── KPIs ─────────────────────────────────────────────────────
+function renderKPIs() {
+  document.getElementById('meta-fa-lbl').textContent = METAS.fa_min;
+  document.getElementById('meta-wmape-lbl').textContent = METAS.wmape_max;
+
+  var actuals = demandData.mensal.filter(function(m){return m.is_actual && m.vol_prev>0;});
+  var mesesR = actuals.map(function(m){return m.label;});
+  var periodo = mesesR.length>0 ? mesesR.join('–')+'/26' : 'mock';
+  document.getElementById('kpi-periodo-fa').textContent = periodo;
+
+  var fa,wmape,bias;
+  if (actuals.length >= 1) {
+    var tErr=0,tVol=0,tBias=0;
+    actuals.forEach(function(m){tErr+=Math.abs((m.vol_real||0)-m.vol_prev);tBias+=(m.vol_real||0)-m.vol_prev;tVol+=m.vol_prev;});
+    wmape=tVol>0?tErr/tVol*100:0; fa=100-wmape; bias=tVol>0?tBias/tVol*100:0;
+  } else {
+    var last=MOCK.fa_history.at(-1); wmape=last.wmape; fa=100-wmape; bias=last.bias;
+  }
+
+  document.getElementById('kpi-fa').textContent=fa.toFixed(1)+'%';
+  document.getElementById('kpi-fa').style.color=fa>=METAS.fa_min?'var(--verde)':'var(--vermelho)';
+  var prev=MOCK.fa_history.at(-2); var faPrev=100-prev.wmape;
+  var faTEl=document.getElementById('kpi-fa-trend');
+  faTEl.textContent=(fa>=faPrev?'▲':'▼')+' '+Math.abs(fa-faPrev).toFixed(1)+'pp';
+  faTEl.className='kpi-trend '+(fa>=faPrev?'up':'down');
+  document.getElementById('kpi-wmape').textContent=wmape.toFixed(1)+'%';
+  document.getElementById('kpi-wmape').style.color=wmape<=METAS.wmape_max?'var(--verde)':'var(--vermelho)';
+  var biasEl=document.getElementById('kpi-bias');
+  biasEl.textContent=(bias>=0?'+':'')+bias.toFixed(1)+'%';
+  biasEl.style.color=Math.abs(bias)<=METAS.bias_max?'var(--verde)':'var(--vermelho)';
+
+  var vR=actuals.reduce(function(s,m){return s+(m.vol_real||0);},0);
+  var vP=actuals.reduce(function(s,m){return s+m.vol_prev;},0);
+  var d=vR-vP;
+  document.getElementById('kpi-gap').textContent=(d>=0?'+':'')+formatInt(d);
+  document.getElementById('kpi-gap').style.color=d>=0?'var(--verde)':'var(--vermelho)';
+  document.getElementById('kpi-gap-unit').textContent=(vP>0?(d/vP*100).toFixed(1):'0')+'% · YTD '+periodo;
+
+  // Banner
+  var banner=document.getElementById('source-banner');
+  if (demandData.hasPlan && demandData.hasFat) {
+    banner.className='source-banner real';
+    banner.innerHTML='✓ Plano comercial (Supabase) × Faturamento real (Omie) · YTD '+periodo;
+    document.getElementById('fva-sub').textContent='Plano = Projeção Ajustada · Real = Faturamento Omie · YTD '+periodo;
+  } else if (demandData.hasFat) {
+    banner.className='source-banner partial';
+    banner.innerHTML='ℹ Faturamento real carregado · Plano comercial: mock — suba em <a href="dados.html" style="color:inherit;text-decoration:underline">Dados → Metas → Plan. Vendas</a>';
+    document.getElementById('fva-sub').textContent='Real = Faturamento Omie · Plano = mock';
+  } else if (demandData.hasPlan) {
+    banner.className='source-banner partial';
+    banner.innerHTML='ℹ Plano comercial carregado · Faturamento: mock — suba em <a href="dados.html" style="color:inherit;text-decoration:underline">Dados → Faturamento</a>';
+    document.getElementById('fva-sub').textContent='Plano = Projeção Ajustada · Real = mock';
+  } else {
+    banner.className='source-banner mock';
+    banner.innerHTML='📊 Dados mock — carregue o plano e faturamento em <a href="dados.html" style="color:inherit;text-decoration:underline">Dados & Sync</a>';
+    document.getElementById('fva-sub').textContent='Dados mock';
+  }
+}
+
+// ── Charts ───────────────────────────────────────────────────
+function renderChartFvA() {
+  var d=demandData.mensal;
+  var u=chartUnit;
+  var realData, planData, yFmt;
+
+  if (u==='rs') {
+    realData=d.map(function(m){return m.rec_real;});
+    planData=d.map(function(m){return m.rec_prev;});
+    yFmt=function(v){return formatBRL(v);};
+  } else {
+    realData=d.map(function(m){return m.vol_real?convertUnit(m.vol_real,u):null;});
+    planData=d.map(function(m){return convertUnit(m.vol_prev,u);});
+    yFmt=function(v){return unitFmt(v,u);};
+  }
+
+  if(chartFva) chartFva.destroy();
+  chartFva=new Chart(document.getElementById('chart-fva'),{type:'bar',
+    data:{labels:d.map(function(m){return m.label;}),datasets:[
+      {label:'Faturamento Real',data:realData,backgroundColor:'#22C55E44',borderColor:'#22C55E',borderWidth:1.5,barPercentage:.5,categoryPercentage:.8,order:3},
+      {label:'Plano Comercial',data:planData,backgroundColor:'#FFB81D18',borderColor:'#FFB81D66',borderWidth:1,barPercentage:.5,categoryPercentage:.8,order:4},
+    ]},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},
+      scales:{x:{grid:{color:gridColorLight()}},y:{grid:{color:gridColorLight()},ticks:{callback:yFmt}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+(ctx.raw?unitFmt(ctx.raw,u):'—');}}}}}
+  });
+}
+
+function renderChartFAHist() {
+  var labels=MOCK.fa_history.map(function(h){return h.label;});
+  chartFaH=new Chart(document.getElementById('chart-fa-hist'),{type:'line',
+    data:{labels:labels,datasets:[
+      {label:'FA %',data:MOCK.fa_history.map(function(h){return h.fa;}),borderColor:'#22C55E',backgroundColor:'#22C55E18',fill:true,tension:.3,borderWidth:2,pointRadius:3},
+      {label:'WMAPE %',data:MOCK.fa_history.map(function(h){return h.wmape;}),borderColor:'#EE2737',backgroundColor:'transparent',tension:.3,borderWidth:2,pointRadius:3},
+      {label:METAS.fa_min+'%',data:Array(labels.length).fill(METAS.fa_min),borderDash:[5,3],borderColor:metaLineColor(),pointRadius:0,borderWidth:1.5},
+    ]},
+    options:{responsive:true,scales:{x:{grid:{color:gridColorLight()}},y:{min:75,max:100,grid:{color:gridColorLight()},ticks:{callback:function(v){return v+'%';}}}},
+      plugins:{legend:{position:'top',align:'end',labels:{boxWidth:8,padding:8,font:{size:9}}},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+(ctx.raw?ctx.raw.toFixed(1):'—')+'%';}}}}}
+  });
+}
+
+function renderChartBias() {
+  var biasData=[];
+  Object.entries(demandData.byFamilia).forEach(function(entry) {
+    var nf=entry[0],d=entry[1];
+    var plan=d.vol_real_plan||d.vol_prev||0;
+    var real=d.vol_real_fat||0;
+    if (plan>0 && real>0) biasData.push({familia:d.label||nf, bias:(real-plan)/plan*100});
+  });
+  if (!biasData.length) MOCK.bias_familia.forEach(function(b){biasData.push({familia:b.familia,bias:b.bias});});
+
+  var actuals=demandData.mensal.filter(function(m){return m.is_actual;});
+  var lastMes=actuals.length>0?actuals[actuals.length-1].label:'—';
+  document.getElementById('bias-title').textContent='Bias por Família — YTD '+lastMes+'/26';
+
+  var labels=biasData.map(function(b){return b.familia;});
+  var biases=biasData.map(function(b){return b.bias;});
+  var colors=biases.map(function(b){return b>3?'#EE273755':b>0?'#F9731655':b<-3?'#3B82F655':'#22C55E44';});
+  var bords=biases.map(function(b){return b>3?'#EE2737':b>0?'#F97316':b<-3?'#3B82F6':'#22C55E';});
+  chartBias=new Chart(document.getElementById('chart-bias'),{type:'bar',
+    data:{labels:labels,datasets:[{label:'Bias %',data:biases,backgroundColor:colors,borderColor:bords,borderWidth:1.5,barPercentage:.5}]},
+    options:{indexAxis:'y',responsive:true,scales:{x:{grid:{color:gridColorLight()},ticks:{callback:function(v){return(v>=0?'+':'')+v+'%';}}},y:{grid:{display:false}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' Bias: '+(ctx.raw>=0?'+':'')+ctx.raw.toFixed(1)+'%';}}}}}
+  });
+}
+
+// ── Table ────────────────────────────────────────────────────
+function renderTable() {
+  var tbody=document.getElementById('dev-tbody');
+
+  if (mainView==='familia') {
+    document.getElementById('th-agrup').textContent='Família';
+    document.getElementById('table-section-title').innerHTML='Desvios por <em>Família</em> — YTD (PP)';
+    var famData=[];
+    Object.entries(demandData.byFamilia).forEach(function(entry) {
+      var nf=entry[0],d=entry[1];
+      // Plan = REAL/AJUS from plan, Real = faturamento
+      var plan = d.vol_real_plan || d.vol_prev || 0;
+      var real = d.vol_real_fat || 0;
+      famData.push({familia:d.label||nf, vol_prev:plan, vol_real:real});
+    });
+    famData.sort(function(a,b){return b.vol_real-a.vol_real;});
+    tbody.innerHTML=famData.map(function(b) {
+      var dev=b.vol_real-b.vol_prev, devPct=b.vol_prev>0?dev/b.vol_prev*100:0;
+      var wmape=b.vol_prev>0?Math.abs(dev)/b.vol_prev*100:0;
+      var cls=wmape<5?'ok':wmape<12?'atencao':'critico';
+      var lbl=wmape<5?'🟢 OK':wmape<12?'🟡 Desvio':'🔴 Crítico';
+      return '<tr><td class="bold name">'+b.familia+'</td>'+
+        '<td class="right">'+formatInt(b.vol_prev)+'</td><td class="right bold">'+formatInt(b.vol_real)+'</td>'+
+        '<td class="right" style="color:'+(dev>=0?'var(--verde)':'var(--vermelho)')+'">'+(dev>=0?'+':'')+formatInt(dev)+'</td>'+
+        '<td class="right" style="color:'+(dev>=0?'var(--verde)':'var(--vermelho)')+'">'+(devPct>=0?'+':'')+devPct.toFixed(1)+'%</td>'+
+        '<td class="right">'+wmape.toFixed(1)+'%</td>'+
+        '<td class="right" style="color:'+(dev>=0?'var(--laranja)':'var(--azul)')+'">'+(devPct>=0?'+':'')+devPct.toFixed(1)+'%</td>'+
+        '<td class="center"><span class="badge '+cls+'">'+lbl+'</span></td></tr>';
+    }).join('');
+
+  } else if (mainView==='sku') {
+    document.getElementById('th-agrup').textContent='SKU / Descrição';
+    document.getElementById('table-section-title').innerHTML='Desvios por <em>SKU</em> — YTD (PP)';
+    var skuList=[];
+    Object.values(demandData.bySku).forEach(function(s) {
+      var plan = s.vol_real_plan || s.vol_prev || 0;
+      var real = s.vol_real_fat || 0;
+      if (plan===0 && real===0) return;
+      skuList.push({sku:s.codigo, desc:s.descricao||'', vol_prev:plan, vol_real:real});
+    });
+    skuList.sort(function(a,b){return b.vol_real-a.vol_real;});
+    tbody.innerHTML=skuList.map(function(s) {
+      var dev=s.vol_real-s.vol_prev, devPct=s.vol_prev>0?dev/s.vol_prev*100:0;
+      var wmape=s.vol_prev>0?Math.abs(dev)/s.vol_prev*100:0;
+      var cls=wmape<5?'ok':wmape<12?'atencao':'critico';
+      var lbl=wmape<5?'🟢 OK':wmape<12?'🟡 Desvio':'🔴 Crítico';
+      return '<tr><td><span class="mono bold">'+s.sku+'</span><br><span style="font-size:.65rem;color:var(--txt-3)">'+s.desc+'</span></td>'+
+        '<td class="right">'+formatInt(s.vol_prev)+'</td><td class="right bold">'+formatInt(s.vol_real)+'</td>'+
+        '<td class="right" style="color:'+(dev>=0?'var(--verde)':'var(--vermelho)')+'">'+(dev>=0?'+':'')+formatInt(dev)+'</td>'+
+        '<td class="right" style="color:'+(dev>=0?'var(--verde)':'var(--vermelho)')+'">'+(devPct>=0?'+':'')+devPct.toFixed(1)+'%</td>'+
+        '<td class="right">'+wmape.toFixed(1)+'%</td><td class="right dim">—</td>'+
+        '<td class="center"><span class="badge '+cls+'">'+lbl+'</span></td></tr>';
+    }).join('');
+
+  } else {
+    document.getElementById('th-agrup').textContent='Canal';
+    document.getElementById('table-section-title').innerHTML='Desvios por <em>Canal</em> — mock';
+    var canais=[{nome:'Varejo',vP:890000,vR:875000},{nome:'Atacado',vP:580000,vR:600000},{nome:'Food Service',vP:120000,vR:108000},{nome:'E-commerce',vP:45000,vR:47000},{nome:'Co-packing',vP:330000,vR:310000}];
+    tbody.innerHTML=canais.map(function(c){var dev=c.vR-c.vP,pct=dev/c.vP*100,w=Math.abs(pct),cls=w<5?'ok':w<12?'atencao':'critico',lbl=w<5?'🟢 OK':w<12?'🟡 Desvio':'🔴 Crítico';
+      return '<tr><td class="bold name">'+c.nome+'</td><td class="right">'+formatInt(c.vP)+'</td><td class="right bold">'+formatInt(c.vR)+'</td><td class="right" style="color:'+(dev>=0?'var(--verde)':'var(--vermelho)')+'">'+(dev>=0?'+':'')+formatInt(dev)+'</td><td class="right" style="color:'+(dev>=0?'var(--verde)':'var(--vermelho)')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td><td class="right">'+w.toFixed(1)+'%</td><td class="right dim">—</td><td class="center"><span class="badge '+cls+'">'+lbl+'</span></td></tr>';
+    }).join('');
+  }
+}
+
+function setMainView(v,el) {
+  mainView=v;
+  document.querySelectorAll('#view-main .view-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active'); renderTable();
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  await initApp('demanda');
+  await loadDemandData();
+  renderKPIs(); renderChartFvA(); renderChartFAHist(); renderChartBias(); renderTable();
+});
+</script>
+</body>
+</html>
